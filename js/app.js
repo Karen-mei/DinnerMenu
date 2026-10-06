@@ -64,6 +64,79 @@ form.addEventListener("submit", (event) => {
 
 render(loadWishes());
 
+// 「今ある食材」機能
+// 家にある食材（品名＋量）を書いておくと、AIへの質問文に含めて使い切りを提案してもらえる。
+// 買う食材リストからも自動で除外される。
+const STOCK_STORAGE_KEY = "menuApp.stock";
+
+const stockForm = document.getElementById("stock-form");
+const stockNameInput = document.getElementById("stock-name-input");
+const stockAmountInput = document.getElementById("stock-amount-input");
+const stockList = document.getElementById("stock-list");
+const stockEmptyMessage = document.getElementById("stock-empty-message");
+
+function loadStock() {
+  const raw = localStorage.getItem(STOCK_STORAGE_KEY);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function saveStock(items) {
+  localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(items));
+}
+
+function renderStock() {
+  const items = loadStock();
+  stockList.innerHTML = "";
+  stockEmptyMessage.style.display = items.length === 0 ? "block" : "none";
+
+  for (const item of items) {
+    const li = document.createElement("li");
+
+    const span = document.createElement("span");
+    span.className = "wish-text";
+    span.textContent = item.amount ? `${item.name}（${item.amount}）` : item.name;
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "delete-btn";
+    deleteBtn.textContent = "×";
+    deleteBtn.setAttribute("aria-label", "削除");
+    deleteBtn.addEventListener("click", () => {
+      const current = loadStock().filter((i) => i.id !== item.id);
+      saveStock(current);
+      renderStock();
+      renderShoppingList();
+    });
+
+    li.appendChild(span);
+    li.appendChild(deleteBtn);
+    stockList.appendChild(li);
+  }
+}
+
+stockForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const name = stockNameInput.value.trim();
+  if (!name) return;
+  const amount = stockAmountInput.value.trim();
+
+  const items = loadStock();
+  items.unshift({ id: Date.now(), name, amount });
+  saveStock(items);
+  renderStock();
+  renderShoppingList();
+
+  stockNameInput.value = "";
+  stockAmountInput.value = "";
+  stockNameInput.focus();
+});
+
+renderStock();
+
 // 「調味料マスタ」のデータ読み書き（画面はpantry.htmlの方にある）
 // 家にある調味料をチェックしておくと、買う食材リストから自動で除外される。
 const PANTRY_STORAGE_KEY = "menuApp.pantryItems";
@@ -106,18 +179,36 @@ function toDateKey(date) {
   return `${y}-${m}-${d}`;
 }
 
-function getThisWeekDates() {
+// 表示する期間（7日間）。買い物の日がずれても前後に動かせるように、
+// 「今週固定」ではなく開始日を保存しておく方式にしている。
+const PERIOD_STORAGE_KEY = "menuApp.periodStart";
+
+function getDefaultPeriodStart() {
   const today = new Date();
   // getDay(): 日=0, 月=1, ... 土=6 なので、月曜始まりに揃える
   const diffFromMonday = (today.getDay() + 6) % 7;
   const monday = new Date(today);
   monday.setDate(today.getDate() - diffFromMonday);
+  return toDateKey(monday);
+}
+
+function loadPeriodStart() {
+  return localStorage.getItem(PERIOD_STORAGE_KEY) || getDefaultPeriodStart();
+}
+
+function savePeriodStart(dateKey) {
+  localStorage.setItem(PERIOD_STORAGE_KEY, dateKey);
+}
+
+function getPeriodDates() {
+  const [y, m, d] = loadPeriodStart().split("-").map(Number);
+  const start = new Date(y, m - 1, d);
 
   const dates = [];
   for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    dates.push(d);
+    const dt = new Date(start);
+    dt.setDate(start.getDate() + i);
+    dates.push(dt);
   }
   return dates;
 }
@@ -141,7 +232,7 @@ function renderWeek() {
   const todayKey = toDateKey(new Date());
   weekList.innerHTML = "";
 
-  for (const date of getThisWeekDates()) {
+  for (const date of getPeriodDates()) {
     const dateKey = toDateKey(date);
     const li = document.createElement("li");
     if (dateKey === todayKey) li.classList.add("is-today");
@@ -180,6 +271,39 @@ function renderWeek() {
 
 renderWeek();
 
+// 期間コントロール（前へ/次へ/日付指定）
+const periodStartInput = document.getElementById("period-start-input");
+const prevPeriodBtn = document.getElementById("prev-period-btn");
+const nextPeriodBtn = document.getElementById("next-period-btn");
+
+function refreshPeriodInput() {
+  periodStartInput.value = loadPeriodStart();
+}
+
+function renderAll() {
+  renderWeek();
+  renderMenu(); // この中でrenderShoppingList()も呼ばれる
+  renderPeriodNotes();
+}
+
+function shiftPeriod(days) {
+  const start = getPeriodDates()[0];
+  start.setDate(start.getDate() + days);
+  savePeriodStart(toDateKey(start));
+  refreshPeriodInput();
+  renderAll();
+}
+
+prevPeriodBtn.addEventListener("click", () => shiftPeriod(-7));
+nextPeriodBtn.addEventListener("click", () => shiftPeriod(7));
+periodStartInput.addEventListener("change", () => {
+  if (!periodStartInput.value) return;
+  savePeriodStart(periodStartInput.value);
+  renderAll();
+});
+
+refreshPeriodInput();
+
 // 「AIに献立を考えてもらう」機能
 // 裏方サーバーは使わず、質問文をコピーしてClaudeアプリに貼り付けてもらい、
 // 返ってきた答えを貼り付けてもらう方式（無料で使える）。
@@ -196,21 +320,33 @@ const loadStatus = document.getElementById("load-status");
 const menuList = document.getElementById("menu-list");
 const shoppingList = document.getElementById("shopping-list");
 const shoppingEmpty = document.getElementById("shopping-empty");
+const budgetEstimate = document.getElementById("budget-estimate");
 
 function buildPrompt() {
   const wishes = loadWishes();
   const wishText =
     wishes.length > 0 ? wishes.map((w) => `・${w.text}`).join("\n") : "（特になし）";
 
+  const stockItems = loadStock();
+  const stockText =
+    stockItems.length > 0
+      ? stockItems.map((i) => `・${i.name}${i.amount ? `（${i.amount}）` : ""}`).join("\n")
+      : "（特になし）";
+
   const statusMap = loadWeekStatus();
   const statusLabels = { with: "旦那いる", without: "旦那いない", none: "作らない" };
-  const days = getThisWeekDates()
+  const days = getPeriodDates()
     .map((date) => {
       const dateKey = toDateKey(date);
       const status = statusMap[dateKey];
       return `${dateKey}: ${status ? statusLabels[status] : "未定"}`;
     })
     .join("\n");
+
+  const extraInstruction = loadExtraInstruction();
+  const extraInstructionBlock = extraInstruction
+    ? `\n【追加の指示】\n${extraInstruction}\n`
+    : "";
 
   return `あなたは家庭料理の献立を考える専門家です。以下の条件で1週間分の晩ごはんの献立を提案してください。
 
@@ -220,14 +356,18 @@ function buildPrompt() {
 ・「旦那いる」の日は大人2人＋子ども1人分、「旦那いない」の日は大人1人＋子ども1人分として、使う食材と分量を計算してください。
 ・「旦那いない」の日は、品数が少なめの簡単な料理でも構いません。
 ・できるだけ無添加・手作りの味付けにしたいので、カレールーやシチューのルー、めんつゆの素などの市販の合わせ調味料はなるべく使わず、しょうゆ・みそ・砂糖などを組み合わせて一から味付けする料理を優先してください。
+・以下の「今ある食材」は、できるだけ使い切れるように献立に組み込んでください（無理に全部使う必要はありません）。
 ・以下の「食べたいものメモ」の中から、1週間の中で自然に使えそうなものがあれば積極的に取り入れてください（すべて使う必要はありません）。
 ・同じ料理が1週間で重複しないようにしてください。
-・ingredients には、その日の料理に使う食材を全て入れてください。野菜だけでなく、肉・魚・調味料・加工品なども含めてください。各食材には name（食材名）、amount（分量、例: "300g"）、category（"肉・魚" "野菜" "調味料" "その他" のいずれか）を付けてください。
-
+・ingredients には、その日の料理に使う食材を全て入れてください（「今ある食材」で賄える分も、記録のためそのまま含めてください）。野菜だけでなく、肉・魚・調味料・加工品なども含めてください。各食材には name（食材名）、amount（分量、例: "300g"）、category（"肉・魚" "野菜" "調味料" "その他" のいずれか）、price（今の日本の物価を踏まえた概算の金額。円単位の数値。わからなければ0）を付けてください。
+${extraInstructionBlock}
 【食べたいものメモ】
 ${wishText}
 
-【今週の予定】
+【今ある食材】
+${stockText}
+
+【対象期間の予定】
 ${days}
 
 【出力形式】
@@ -239,7 +379,7 @@ ${days}
       "dish": "料理名またはnull",
       "note": "一言メモ（10〜20文字程度、取り分けのコツなど）",
       "ingredients": [
-        { "name": "食材名", "amount": "分量", "category": "肉・魚" }
+        { "name": "食材名", "amount": "分量", "category": "肉・魚", "price": 300 }
       ]
     }
   ]
@@ -265,6 +405,52 @@ copyPromptBtn.addEventListener("click", async () => {
     copyStatus.classList.add("is-error");
   }
 });
+
+// 「軽めに」「豚肉なしで」のような追加指示（次に質問文を作るときに反映される）
+const EXTRA_INSTRUCTION_KEY = "menuApp.extraInstruction";
+const extraInstructionInput = document.getElementById("extra-instruction-input");
+
+function loadExtraInstruction() {
+  return localStorage.getItem(EXTRA_INSTRUCTION_KEY) || "";
+}
+
+extraInstructionInput.value = loadExtraInstruction();
+extraInstructionInput.addEventListener("blur", () => {
+  localStorage.setItem(EXTRA_INSTRUCTION_KEY, extraInstructionInput.value.trim());
+});
+
+// 期間ごとの「結果・メモ」欄
+const PERIOD_NOTES_KEY = "menuApp.periodNotes";
+const periodNotesInput = document.getElementById("period-notes-input");
+
+function loadAllPeriodNotes() {
+  const raw = localStorage.getItem(PERIOD_NOTES_KEY);
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function renderPeriodNotes() {
+  const all = loadAllPeriodNotes();
+  periodNotesInput.value = all[loadPeriodStart()] || "";
+}
+
+periodNotesInput.addEventListener("blur", () => {
+  const all = loadAllPeriodNotes();
+  const text = periodNotesInput.value.trim();
+  const periodKey = loadPeriodStart();
+  if (text) {
+    all[periodKey] = text;
+  } else {
+    delete all[periodKey];
+  }
+  localStorage.setItem(PERIOD_NOTES_KEY, JSON.stringify(all));
+});
+
+renderPeriodNotes();
 
 function loadMenu() {
   const raw = localStorage.getItem(MENU_STORAGE_KEY);
@@ -333,7 +519,7 @@ function renderMenu() {
   const menuMap = loadMenu();
   menuList.innerHTML = "";
 
-  for (const date of getThisWeekDates()) {
+  for (const date of getPeriodDates()) {
     const dateKey = toDateKey(date);
     const entry = menuMap[dateKey];
     if (!entry) continue;
@@ -444,12 +630,13 @@ function normalizeIngredient(item) {
     const match = item.match(/^(\S+)\s*(.*)$/);
     const name = match ? match[1] : item;
     const amount = match ? match[2].trim() : "";
-    return { name, amount, category: "その他" };
+    return { name, amount, category: "その他", price: 0 };
   }
   const name = (item && item.name) || "";
   const amount = (item && item.amount) || "";
   const category = CATEGORY_ORDER.includes(item && item.category) ? item.category : "その他";
-  return { name, amount, category };
+  const price = Number.isFinite(item && item.price) ? item.price : 0;
+  return { name, amount, category, price };
 }
 
 const SHOPPING_CHECKED_KEY = "menuApp.shoppingChecked";
@@ -470,29 +657,28 @@ function saveShoppingChecked(checkedMap) {
 
 function renderShoppingList() {
   const menuMap = loadMenu();
-  const grouped = new Map(); // 食材名 -> { category, items: [{ dayLabel, amount }] }
+  const grouped = new Map(); // 食材名 -> { category, items: [{ dayLabel, amount, price }] }
 
-  for (const date of getThisWeekDates()) {
+  for (const date of getPeriodDates()) {
     const entry = menuMap[toDateKey(date)];
     const ingredients = entry && (entry.ingredients || entry.vegetables);
     if (!ingredients) continue;
 
     const dayLabel = DAY_LABELS[(date.getDay() + 6) % 7];
     for (const raw of ingredients) {
-      const { name, amount, category } = normalizeIngredient(raw);
+      const { name, amount, category, price } = normalizeIngredient(raw);
       if (!name) continue;
       if (!grouped.has(name)) grouped.set(name, { category, items: [] });
-      grouped.get(name).items.push({ dayLabel, amount });
+      grouped.get(name).items.push({ dayLabel, amount, price });
     }
   }
 
-  // 調味料マスタで「家にある」になっているものは買う食材リストから除く
-  const pantryHaveSet = new Set(
-    loadPantry()
-      .filter((item) => item.hasIt)
-      .map((item) => item.name)
-  );
-  for (const name of pantryHaveSet) {
+  // 調味料マスタで「家にある」ものと、「今ある食材」に登録済みのものは買う食材リストから除く
+  const excludeSet = new Set([
+    ...loadPantry().filter((item) => item.hasIt).map((item) => item.name),
+    ...loadStock().map((item) => item.name),
+  ]);
+  for (const name of excludeSet) {
     grouped.delete(name);
   }
 
@@ -500,6 +686,8 @@ function renderShoppingList() {
   shoppingEmpty.style.display = grouped.size === 0 ? "block" : "none";
 
   const checkedMap = loadShoppingChecked();
+
+  let totalBudget = 0;
 
   for (const category of CATEGORY_ORDER) {
     const entries = [...grouped].filter(([, value]) => value.category === category);
@@ -511,6 +699,9 @@ function renderShoppingList() {
     shoppingList.appendChild(headerLi);
 
     for (const [name, { items }] of entries) {
+      const itemTotal = items.reduce((sum, item) => sum + (item.price || 0), 0);
+      totalBudget += itemTotal;
+
       const li = document.createElement("li");
       li.className = "shopping-item";
       if (checkedMap[name]) li.classList.add("is-checked");
@@ -539,7 +730,10 @@ function renderShoppingList() {
       const detailLabel = document.createElement("span");
       detailLabel.className = "shopping-detail";
       detailLabel.textContent = items
-        .map((item) => (item.amount ? `${item.dayLabel} ${item.amount}` : item.dayLabel))
+        .map((item) => {
+          const base = item.amount ? `${item.dayLabel} ${item.amount}` : item.dayLabel;
+          return item.price ? `${base}（¥${item.price.toLocaleString()}）` : base;
+        })
         .join(" ・ ");
       textWrap.appendChild(detailLabel);
 
@@ -547,6 +741,9 @@ function renderShoppingList() {
       shoppingList.appendChild(li);
     }
   }
+
+  budgetEstimate.textContent =
+    totalBudget > 0 ? `推定予算：約¥${totalBudget.toLocaleString()}（AIによる概算）` : "";
 }
 
 renderMenu();
