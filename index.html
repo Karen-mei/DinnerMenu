@@ -32,6 +32,31 @@
     <p class="section-note">日ごとに、晩ごはんの状況をタップで選んでください。</p>
     <ul id="week-list" class="week-list"></ul>
   </section>
+
+  <section class="card">
+    <h2>AIに献立を考えてもらう</h2>
+
+    <div class="ai-step">
+      <p class="ai-step-title">① 質問文を作る</p>
+      <button type="button" id="make-prompt-btn">質問文を作る</button>
+    </div>
+
+    <div id="prompt-area" class="ai-step" hidden>
+      <p class="ai-step-title">② コピーしてClaudeアプリに貼り付けて送る</p>
+      <textarea id="prompt-output" class="ai-textarea" readonly rows="4"></textarea>
+      <button type="button" id="copy-prompt-btn">コピーする</button>
+      <p id="copy-status" class="copy-status" aria-live="polite"></p>
+    </div>
+
+    <div class="ai-step">
+      <p class="ai-step-title">③ AIの返事をここに貼り付ける</p>
+      <textarea id="ai-response-input" class="ai-textarea" rows="4" placeholder="ここに貼り付け"></textarea>
+      <button type="button" id="load-menu-btn">④ 読み込む</button>
+      <p id="load-status" class="load-status" aria-live="polite"></p>
+    </div>
+
+    <ul id="menu-list" class="menu-list"></ul>
+  </section>
 </main>
 
 <script src="js/app.js"></script>

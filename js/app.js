@@ -157,6 +157,167 @@ function renderWeek() {
 
 renderWeek();
 
+// 「AIに献立を考えてもらう」機能
+// 裏方サーバーは使わず、質問文をコピーしてClaudeアプリに貼り付けてもらい、
+// 返ってきた答えを貼り付けてもらう方式（無料で使える）。
+const MENU_STORAGE_KEY = "menuApp.menu";
+
+const makePromptBtn = document.getElementById("make-prompt-btn");
+const promptArea = document.getElementById("prompt-area");
+const promptOutput = document.getElementById("prompt-output");
+const copyPromptBtn = document.getElementById("copy-prompt-btn");
+const copyStatus = document.getElementById("copy-status");
+const aiResponseInput = document.getElementById("ai-response-input");
+const loadMenuBtn = document.getElementById("load-menu-btn");
+const loadStatus = document.getElementById("load-status");
+const menuList = document.getElementById("menu-list");
+
+function buildPrompt() {
+  const wishes = loadWishes();
+  const wishText =
+    wishes.length > 0 ? wishes.map((w) => `・${w.text}`).join("\n") : "（特になし）";
+
+  const statusMap = loadWeekStatus();
+  const statusLabels = { with: "旦那いる", without: "旦那いない", none: "作らない" };
+  const days = getThisWeekDates()
+    .map((date) => {
+      const dateKey = toDateKey(date);
+      const status = statusMap[dateKey];
+      return `${dateKey}: ${status ? statusLabels[status] : "未定"}`;
+    })
+    .join("\n");
+
+  return `あなたは家庭料理の献立を考える専門家です。以下の条件で1週間分の晩ごはんの献立を提案してください。
+
+【条件】
+・1歳の子どもも大人と同じ料理を取り分けて食べます。できるだけ薄味にしやすい、取り分けしやすい料理を中心に考えてください。
+・「作らない」の日は献立を考えず、dish を null にしてください。
+・「旦那いない」の日は、品数が少なめの簡単な料理でも構いません。
+・以下の「食べたいものメモ」の中から、1週間の中で自然に使えそうなものがあれば積極的に取り入れてください（すべて使う必要はありません）。
+・同じ料理が1週間で重複しないようにしてください。
+
+【食べたいものメモ】
+${wishText}
+
+【今週の予定】
+${days}
+
+【出力形式】
+説明や前置きは一切不要です。次のJSON形式のみを出力してください。
+{
+  "days": [
+    { "date": "YYYY-MM-DD", "dish": "料理名またはnull", "note": "一言メモ（10〜20文字程度、取り分けのコツなど）" }
+  ]
+}`;
+}
+
+makePromptBtn.addEventListener("click", () => {
+  promptOutput.value = buildPrompt();
+  promptArea.hidden = false;
+  copyStatus.textContent = "";
+});
+
+copyPromptBtn.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(promptOutput.value);
+    copyStatus.textContent = "コピーしました。Claudeアプリに貼り付けてください。";
+    copyStatus.classList.remove("is-error");
+  } catch {
+    // クリップボードが使えない環境向けに、手動選択できるようにしておく
+    promptOutput.focus();
+    promptOutput.select();
+    copyStatus.textContent = "自動コピーできませんでした。テキストが選択されているので、そのままコピーしてください。";
+    copyStatus.classList.add("is-error");
+  }
+});
+
+function loadMenu() {
+  const raw = localStorage.getItem(MENU_STORAGE_KEY);
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function saveMenu(menuMap) {
+  localStorage.setItem(MENU_STORAGE_KEY, JSON.stringify(menuMap));
+}
+
+function extractJson(text) {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[0]);
+  } catch {
+    return null;
+  }
+}
+
+loadMenuBtn.addEventListener("click", () => {
+  const text = aiResponseInput.value.trim();
+  if (!text) {
+    loadStatus.textContent = "AIの返事を貼り付けてから押してください。";
+    loadStatus.classList.add("is-error");
+    return;
+  }
+
+  const parsed = extractJson(text);
+  if (!parsed || !Array.isArray(parsed.days)) {
+    loadStatus.textContent = "読み取れませんでした。AIの返事をそのまま（JSON部分を含めて）貼り付けてください。";
+    loadStatus.classList.add("is-error");
+    return;
+  }
+
+  const menuMap = loadMenu();
+  for (const day of parsed.days) {
+    if (!day.date) continue;
+    menuMap[day.date] = { dish: day.dish || null, note: day.note || "" };
+  }
+  saveMenu(menuMap);
+  renderMenu();
+
+  loadStatus.textContent = "読み込みました。下に献立が表示されています。";
+  loadStatus.classList.remove("is-error");
+  aiResponseInput.value = "";
+});
+
+function renderMenu() {
+  const menuMap = loadMenu();
+  menuList.innerHTML = "";
+
+  for (const date of getThisWeekDates()) {
+    const dateKey = toDateKey(date);
+    const entry = menuMap[dateKey];
+    if (!entry) continue;
+
+    const li = document.createElement("li");
+
+    const dateLabel = document.createElement("span");
+    dateLabel.className = "menu-date";
+    dateLabel.textContent = `${date.getMonth() + 1}/${date.getDate()}（${DAY_LABELS[(date.getDay() + 6) % 7]}）`;
+
+    const dishLabel = document.createElement("span");
+    dishLabel.className = "menu-dish";
+    dishLabel.textContent = entry.dish || "（作らない日）";
+
+    li.appendChild(dateLabel);
+    li.appendChild(dishLabel);
+
+    if (entry.note) {
+      const noteLabel = document.createElement("span");
+      noteLabel.className = "menu-note";
+      noteLabel.textContent = entry.note;
+      li.appendChild(noteLabel);
+    }
+
+    menuList.appendChild(li);
+  }
+}
+
+renderMenu();
+
 // PWA用：Service Workerを登録してオフラインでも開けるようにする
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
