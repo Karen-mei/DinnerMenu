@@ -318,13 +318,28 @@ main .card + .card {
   padding: 0;
 }
 
-.shopping-list li {
-  padding: 8px 0;
+.shopping-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
   border-bottom: 1px solid #f0e8e0;
 }
 
-.shopping-list li:last-child {
+.shopping-item:last-child {
   border-bottom: none;
+}
+
+.shopping-checkbox {
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: #ff8a65;
+}
+
+.shopping-text {
+  flex: 1;
 }
 
 .shopping-name {
@@ -337,4 +352,10 @@ main .card + .card {
   display: block;
   font-size: 0.8rem;
   color: #888;
+}
+
+.shopping-item.is-checked .shopping-name,
+.shopping-item.is-checked .shopping-detail {
+  color: #bbb;
+  text-decoration: line-through;
 }

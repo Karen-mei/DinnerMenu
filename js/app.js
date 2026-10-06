@@ -402,6 +402,22 @@ function parseVegLine(line) {
   return { name: match[1], amount: match[2].trim() };
 }
 
+const SHOPPING_CHECKED_KEY = "menuApp.shoppingChecked";
+
+function loadShoppingChecked() {
+  const raw = localStorage.getItem(SHOPPING_CHECKED_KEY);
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function saveShoppingChecked(checkedMap) {
+  localStorage.setItem(SHOPPING_CHECKED_KEY, JSON.stringify(checkedMap));
+}
+
 function renderShoppingList() {
   const menuMap = loadMenu();
   const grouped = new Map(); // 野菜名 -> [{ dayLabel, amount }]
@@ -422,21 +438,42 @@ function renderShoppingList() {
   shoppingList.innerHTML = "";
   shoppingEmpty.style.display = grouped.size === 0 ? "block" : "none";
 
+  const checkedMap = loadShoppingChecked();
+
   for (const [name, items] of grouped) {
     const li = document.createElement("li");
+    li.className = "shopping-item";
+    if (checkedMap[name]) li.classList.add("is-checked");
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "shopping-checkbox";
+    checkbox.checked = Boolean(checkedMap[name]);
+    checkbox.setAttribute("aria-label", `${name}を買った`);
+    checkbox.addEventListener("change", () => {
+      const current = loadShoppingChecked();
+      current[name] = checkbox.checked;
+      saveShoppingChecked(current);
+      li.classList.toggle("is-checked", checkbox.checked);
+    });
+    li.appendChild(checkbox);
+
+    const textWrap = document.createElement("span");
+    textWrap.className = "shopping-text";
 
     const nameLabel = document.createElement("span");
     nameLabel.className = "shopping-name";
     nameLabel.textContent = name;
-    li.appendChild(nameLabel);
+    textWrap.appendChild(nameLabel);
 
     const detailLabel = document.createElement("span");
     detailLabel.className = "shopping-detail";
     detailLabel.textContent = items
       .map((item) => (item.amount ? `${item.dayLabel} ${item.amount}` : item.dayLabel))
       .join(" ・ ");
-    li.appendChild(detailLabel);
+    textWrap.appendChild(detailLabel);
 
+    li.appendChild(textWrap);
     shoppingList.appendChild(li);
   }
 }
