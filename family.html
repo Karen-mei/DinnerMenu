@@ -19,7 +19,7 @@
 
 <main>
   <section class="card">
-    <p class="section-note">ここに登録した人が、「今週の予定」で日ごとに選べるようになります。大人/子どもの区分と、子どもの食べる量の段階は、AIが考える食材の分量に使われます。</p>
+    <p class="section-note">ここに登録した人が、「今週の予定」で日ごとに選べるようになります。大人/子どもの区分と、子どもの年齢層は、AIが考える食材の分量に使われます。</p>
     <form id="family-form" class="stock-form">
       <input type="text" id="family-name-input" placeholder="名前（例：パパ）" autocomplete="off" required>
       <select id="family-type-input">
@@ -27,13 +27,12 @@
         <option value="child">子ども</option>
       </select>
       <select id="family-phase-input" hidden>
-        <option value="">食べる量の段階を選ぶ</option>
-        <option value="離乳食初期（ごく少量）">離乳食初期（ごく少量）</option>
-        <option value="離乳食中期（少量）">離乳食中期（少量）</option>
-        <option value="離乳食後期（大人の1/4量ほど）">離乳食後期（大人の1/4量ほど）</option>
-        <option value="離乳食完了期（大人の1/3量ほど）">離乳食完了期（大人の1/3量ほど）</option>
-        <option value="幼児食（大人の半分程度）">幼児食（大人の半分程度）</option>
-        <option value="ほぼ大人と同じ量">ほぼ大人と同じ量</option>
+        <option value="">食べる量の年齢層を選ぶ</option>
+        <option value="〜3歳（大人の1/3〜1/2程度）">〜3歳（大人の1/3〜1/2程度）</option>
+        <option value="〜6歳（大人の半分程度）">〜6歳（大人の半分程度）</option>
+        <option value="小学生（大人の6〜7割程度）">小学生（大人の6〜7割程度）</option>
+        <option value="中学生（大人の8割〜同じくらい）">中学生（大人の8割〜同じくらい）</option>
+        <option value="高校生以上（大人とほぼ同じ）">高校生以上（大人とほぼ同じ）</option>
       </select>
       <button type="submit">追加</button>
     </form>

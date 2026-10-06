@@ -4,7 +4,7 @@ const FAMILY_STORAGE_KEY = "menuApp.familyMembers";
 const DEFAULT_FAMILY_MEMBERS = [
   { id: 0, name: "ママ", type: "adult", phase: "" },
   { id: 1, name: "パパ", type: "adult", phase: "" },
-  { id: 2, name: "子ども", type: "child", phase: "幼児食（大人の半分程度）" },
+  { id: 2, name: "子ども", type: "child", phase: "〜3歳（大人の1/3〜1/2程度）" },
 ];
 
 const familyForm = document.getElementById("family-form");
