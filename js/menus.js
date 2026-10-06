@@ -68,6 +68,140 @@ function renderSavedMenus() {
 
 renderSavedMenus();
 
+// 「好みと傾向を分析する」機能
+// 保存した献立＋その期間の結果・メモをもとに質問文を作り、Claudeの返事を
+// 「好みと傾向」欄に読み込む。この欄は、今後のメイン画面での献立生成にも使われる。
+const MENU_STORAGE_KEY = "menuApp.menu";
+const PERIOD_NOTES_KEY = "menuApp.periodNotes";
+const PREFERENCE_PROFILE_KEY = "menuApp.preferenceProfile";
+
+const makeTrendPromptBtn = document.getElementById("make-trend-prompt-btn");
+const trendPromptArea = document.getElementById("trend-prompt-area");
+const trendPromptOutput = document.getElementById("trend-prompt-output");
+const copyTrendPromptBtn = document.getElementById("copy-trend-prompt-btn");
+const copyTrendStatus = document.getElementById("copy-trend-status");
+const trendResponseInput = document.getElementById("trend-response-input");
+const loadTrendBtn = document.getElementById("load-trend-btn");
+const loadTrendStatus = document.getElementById("load-trend-status");
+const preferenceProfileInput = document.getElementById("preference-profile-input");
+
+function loadMenu() {
+  const raw = localStorage.getItem(MENU_STORAGE_KEY);
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function loadAllPeriodNotes() {
+  const raw = localStorage.getItem(PERIOD_NOTES_KEY);
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function loadPreferenceProfile() {
+  return localStorage.getItem(PREFERENCE_PROFILE_KEY) || "";
+}
+
+function savePreferenceProfile(text) {
+  localStorage.setItem(PREFERENCE_PROFILE_KEY, text);
+}
+
+function datesBetween(startKey, endKey) {
+  const [sy, sm, sd] = startKey.split("-").map(Number);
+  const [ey, em, ed] = endKey.split("-").map(Number);
+  const start = new Date(sy, sm - 1, sd);
+  const end = new Date(ey, em - 1, ed);
+
+  const keys = [];
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    keys.push(`${y}-${m}-${day}`);
+  }
+  return keys;
+}
+
+function buildTrendPrompt() {
+  const saved = loadSavedMenus();
+  if (saved.length === 0) {
+    return "まだ保存した献立がありません。トップ画面で気に入った期間を「保存」してから、もう一度お試しください。";
+  }
+
+  const menuMap = loadMenu();
+  const notesMap = loadAllPeriodNotes();
+
+  const blocks = saved.map((item) => {
+    const dishLines = datesBetween(item.periodStart, item.periodEnd)
+      .map((dateKey) => menuMap[dateKey])
+      .filter((entry) => entry && entry.dish)
+      .map((entry) => `・${entry.dish}`);
+
+    const periodKey = `${item.periodStart}_${item.periodEnd}`;
+    const note = notesMap[periodKey];
+
+    return [
+      `【${item.label}（${item.periodStart}〜${item.periodEnd}）】`,
+      dishLines.length > 0 ? dishLines.join("\n") : "（献立の記録なし）",
+      note ? `感想・メモ: ${note}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  });
+
+  return `以下は、保存したお気に入りの献立と、その感想の記録です。これらから、味付けの傾向・よく使う食材・好評だった料理の共通点などを分析し、今後の献立作りに活かせるポイントを箇条書きで5〜8個程度にまとめてください。
+説明や前置きは不要です。箇条書きの本文だけを出力してください。
+
+${blocks.join("\n\n")}`;
+}
+
+makeTrendPromptBtn.addEventListener("click", () => {
+  trendPromptOutput.value = buildTrendPrompt();
+  trendPromptArea.hidden = false;
+  copyTrendStatus.textContent = "";
+});
+
+copyTrendPromptBtn.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(trendPromptOutput.value);
+    copyTrendStatus.textContent = "コピーしました。Claudeアプリに貼り付けてください。";
+    copyTrendStatus.classList.remove("is-error");
+  } catch {
+    trendPromptOutput.focus();
+    trendPromptOutput.select();
+    copyTrendStatus.textContent = "自動コピーできませんでした。テキストが選択されているので、そのままコピーしてください。";
+    copyTrendStatus.classList.add("is-error");
+  }
+});
+
+loadTrendBtn.addEventListener("click", () => {
+  const text = trendResponseInput.value.trim();
+  if (!text) {
+    loadTrendStatus.textContent = "AIの返事を貼り付けてから押してください。";
+    loadTrendStatus.classList.add("is-error");
+    return;
+  }
+
+  preferenceProfileInput.value = text;
+  savePreferenceProfile(text);
+
+  loadTrendStatus.textContent = "読み込みました。下の「好みと傾向」欄で自由に書き直せます。";
+  loadTrendStatus.classList.remove("is-error");
+  trendResponseInput.value = "";
+});
+
+preferenceProfileInput.value = loadPreferenceProfile();
+preferenceProfileInput.addEventListener("blur", () => {
+  savePreferenceProfile(preferenceProfileInput.value.trim());
+});
+
 // PWA用：Service Workerを登録してオフラインでも開けるようにする
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

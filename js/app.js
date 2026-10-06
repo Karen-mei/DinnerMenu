@@ -501,6 +501,11 @@ function buildPrompt() {
     ? `\n【追加の指示】\n${extraInstruction}\n`
     : "";
 
+  const preferenceProfile = loadPreferenceProfile();
+  const preferenceBlock = preferenceProfile
+    ? `\n【好みと傾向】\n${preferenceProfile}\n`
+    : "";
+
   const dayCount = getPeriodDates().length;
 
   return `あなたは家庭料理の献立を考える専門家です。以下の条件で、指定された期間（${dayCount}日間）分の晩ごはんの献立を提案してください。
@@ -509,6 +514,7 @@ function buildPrompt() {
 ・1歳の子どもも大人と同じ料理を取り分けて食べます。できるだけ薄味にしやすい、取り分けしやすい料理を中心に考えてください。
 ・子どもの鉄分摂取も意識して、赤身の肉やほうれん草、ひじき、あさりなど鉄分が多い食材を週に数回は取り入れてください。
 ・以下の「苦手な食材」は使わないでください。
+・「好みと傾向」が書かれている場合は、それも踏まえて味付けや献立の方向性を考えてください。
 ・「作らない」の日、または人数が0人や未選択の日は献立を考えず、dish を null、ingredients を空配列にしてください。
 ・各日に書かれている人数（大人◯人・子ども◯人）に合わせて、使う食材と分量を計算してください。人数が少ない日は、品数が少なめの簡単な料理でも構いません。
 ・子どもの名前の後ろに【】で年齢層が書かれている場合は、その年齢層に応じて、その子ども分の食材量を加減してください。
@@ -518,7 +524,7 @@ function buildPrompt() {
 ・同じ料理が期間中に重複しないようにしてください。
 ・ingredients には、その日の料理に使う食材を全て入れてください（「今ある食材」で賄える分も、記録のためそのまま含めてください）。野菜だけでなく、肉・魚・調味料・加工品なども含めてください。各食材には name（食材名）、amount（分量、例: "300g"）、category（"肉・魚" "野菜" "調味料" "その他" のいずれか）、price（今の日本の物価を踏まえた概算の金額。円単位の数値。わからなければ0）を付けてください。
 ・メインの献立とは別に、週2品くらいを目安に副菜（取り分けしやすい小鉢料理など）も提案し、sideDishes に入れてください。
-${extraInstructionBlock}
+${extraInstructionBlock}${preferenceBlock}
 【苦手な食材（使わないでください）】
 ${dislikedText}
 
@@ -582,6 +588,14 @@ extraInstructionInput.value = loadExtraInstruction();
 extraInstructionInput.addEventListener("blur", () => {
   localStorage.setItem(EXTRA_INSTRUCTION_KEY, extraInstructionInput.value.trim());
 });
+
+// 「好みと傾向」のデータ読み込み（画面はmenus.htmlの方にある）
+// 保存した献立をAIに分析させた結果（手で書き直せる）。毎回の質問文に含める。
+const PREFERENCE_PROFILE_KEY = "menuApp.preferenceProfile";
+
+function loadPreferenceProfile() {
+  return localStorage.getItem(PREFERENCE_PROFILE_KEY) || "";
+}
 
 // 期間ごとの「結果・メモ」欄
 const PERIOD_NOTES_KEY = "menuApp.periodNotes";
