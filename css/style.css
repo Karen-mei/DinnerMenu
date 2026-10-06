@@ -125,6 +125,17 @@ body {
   background: #fff0e8;
 }
 
+button.nav-link-btn {
+  width: 100%;
+  background: white;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.share-btn {
+  margin-top: 16px;
+}
+
 main {
   padding: 16px;
   max-width: 480px;

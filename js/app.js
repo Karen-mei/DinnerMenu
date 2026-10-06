@@ -1020,7 +1020,9 @@ function saveShoppingChecked(checkedMap) {
   localStorage.setItem(SHOPPING_CHECKED_KEY, JSON.stringify(checkedMap));
 }
 
-function renderShoppingList() {
+// 買う食材リストの中身（カテゴリごとにまとめた食材 + 手動追加した物）を組み立てる。
+// 画面表示（renderShoppingList）と、共有用テキスト作成（buildShoppingShareText）の両方で使う。
+function getShoppingGroups() {
   const menuMap = loadMenu();
   const grouped = new Map(); // 食材名 -> { category, items: [{ dayLabel, amount, price }] }
 
@@ -1047,10 +1049,16 @@ function renderShoppingList() {
     grouped.delete(name);
   }
 
+  const extraItems = loadExtraShoppingItems(getPeriodKey());
+  return { grouped, extraItems };
+}
+
+function renderShoppingList() {
+  const { grouped, extraItems } = getShoppingGroups();
+
   shoppingList.innerHTML = "";
 
   const checkedMap = loadShoppingChecked();
-  const extraItems = loadExtraShoppingItems(getPeriodKey());
 
   shoppingEmpty.style.display = grouped.size === 0 && extraItems.length === 0 ? "block" : "none";
 
@@ -1151,6 +1159,63 @@ function renderShoppingList() {
   budgetEstimate.textContent =
     totalBudget > 0 ? `推定予算：約¥${totalBudget.toLocaleString()}（AIによる概算）` : "";
 }
+
+// 買う食材リストを、パートナーなどに頼みやすいテキストにして共有する機能。
+// すでにチェック済み（買った）ものは除き、まだ買っていない分だけをまとめる。
+function buildShoppingShareText() {
+  const { grouped, extraItems } = getShoppingGroups();
+  const checkedMap = loadShoppingChecked();
+  const lines = [`買う食材リスト（${loadPeriodStart()} 〜 ${loadPeriodEnd()}）`];
+
+  for (const category of CATEGORY_ORDER) {
+    const entries = [...grouped].filter(
+      ([name, value]) => value.category === category && !checkedMap[name]
+    );
+    if (entries.length === 0) continue;
+
+    lines.push("", `【${category}】`);
+    for (const [name, { items }] of entries) {
+      const total = sumAmounts(items.map((item) => item.amount));
+      const amountText = total || items.map((item) => item.amount).filter(Boolean).join("・");
+      lines.push(amountText ? `・${name}（${amountText}）` : `・${name}`);
+    }
+  }
+
+  const uncheckedExtra = extraItems.filter((item) => !checkedMap[item.name]);
+  if (uncheckedExtra.length > 0) {
+    lines.push("", "【追加した物】");
+    for (const item of uncheckedExtra) {
+      lines.push(item.amount ? `・${item.name}（${item.amount}）` : `・${item.name}`);
+    }
+  }
+
+  return lines.join("\n").trim();
+}
+
+const shareShoppingBtn = document.getElementById("share-shopping-btn");
+const shareShoppingStatus = document.getElementById("share-shopping-status");
+
+shareShoppingBtn.addEventListener("click", async () => {
+  const text = buildShoppingShareText();
+  shareShoppingStatus.classList.remove("is-error");
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ text });
+      return;
+    } catch (err) {
+      if (err && err.name === "AbortError") return; // 共有をキャンセルしただけなので何もしない
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    shareShoppingStatus.textContent = "コピーしました。メッセージアプリなどに貼り付けてください。";
+  } catch {
+    shareShoppingStatus.textContent = "共有に失敗しました。もう一度お試しください。";
+    shareShoppingStatus.classList.add("is-error");
+  }
+});
 
 renderMenu();
 
