@@ -185,15 +185,32 @@ function loadPantry() {
   }
 }
 
+// 「家族構成」のデータ読み書き（画面はfamily.htmlの方にある）
+const FAMILY_STORAGE_KEY = "menuApp.familyMembers";
+const DEFAULT_FAMILY_MEMBERS = [
+  { id: 0, name: "ママ", type: "adult" },
+  { id: 1, name: "パパ", type: "adult" },
+  { id: 2, name: "子ども", type: "child" },
+];
+
+function loadFamilyMembers() {
+  const raw = localStorage.getItem(FAMILY_STORAGE_KEY);
+  if (!raw) {
+    localStorage.setItem(FAMILY_STORAGE_KEY, JSON.stringify(DEFAULT_FAMILY_MEMBERS));
+    return DEFAULT_FAMILY_MEMBERS;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
 // 「今週の予定」機能
-// 日付(YYYY-MM-DD)ごとに "with"（旦那いる）/ "without"（旦那いない）/ "none"（作らない）を保存する
+// 日付(YYYY-MM-DD)ごとに、晩ごはんにいる家族のID一覧(presentIds)と、
+// 作らない日かどうか(cooking: false)を保存する。
 const WEEK_STORAGE_KEY = "menuApp.weekStatus";
 const DAY_LABELS = ["月", "火", "水", "木", "金", "土", "日"];
-const STATUS_OPTIONS = [
-  { value: "with", label: "旦那いる" },
-  { value: "without", label: "旦那いない" },
-  { value: "none", label: "作らない" },
-];
 
 const weekList = document.getElementById("week-list");
 
@@ -277,11 +294,16 @@ function saveWeekStatus(statusMap) {
 
 function renderWeek() {
   const statusMap = loadWeekStatus();
+  const members = loadFamilyMembers();
   const todayKey = toDateKey(new Date());
   weekList.innerHTML = "";
 
   for (const date of getPeriodDates()) {
     const dateKey = toDateKey(date);
+    const entry = statusMap[dateKey];
+    const notCooking = Boolean(entry && entry.cooking === false);
+    const presentIds = entry && entry.cooking !== false ? entry.presentIds || [] : [];
+
     const li = document.createElement("li");
     if (dateKey === todayKey) li.classList.add("is-today");
 
@@ -292,24 +314,44 @@ function renderWeek() {
     const group = document.createElement("div");
     group.className = "status-group";
 
-    for (const option of STATUS_OPTIONS) {
+    for (const member of members) {
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = "status-btn";
-      btn.dataset.status = option.value;
-      btn.textContent = option.label;
-      if (statusMap[dateKey] === option.value) {
+      btn.className = "status-btn member-btn";
+      btn.textContent = member.name;
+      if (!notCooking && presentIds.includes(member.id)) {
         btn.classList.add("is-selected");
       }
       btn.addEventListener("click", () => {
         const current = loadWeekStatus();
-        // もう一度同じボタンを押したら選択解除できるようにする
-        current[dateKey] = current[dateKey] === option.value ? undefined : option.value;
+        const currentEntry =
+          current[dateKey] && current[dateKey].cooking !== false ? current[dateKey] : { cooking: true, presentIds: [] };
+        const ids = new Set(currentEntry.presentIds || []);
+        if (ids.has(member.id)) ids.delete(member.id);
+        else ids.add(member.id);
+        current[dateKey] = { cooking: true, presentIds: [...ids] };
         saveWeekStatus(current);
         renderWeek();
       });
       group.appendChild(btn);
     }
+
+    const noCookBtn = document.createElement("button");
+    noCookBtn.type = "button";
+    noCookBtn.className = "status-btn no-cook-btn";
+    noCookBtn.textContent = "作らない";
+    if (notCooking) noCookBtn.classList.add("is-selected");
+    noCookBtn.addEventListener("click", () => {
+      const current = loadWeekStatus();
+      if (current[dateKey] && current[dateKey].cooking === false) {
+        delete current[dateKey]; // もう一度押したら未定に戻す
+      } else {
+        current[dateKey] = { cooking: false };
+      }
+      saveWeekStatus(current);
+      renderWeek();
+    });
+    group.appendChild(noCookBtn);
 
     li.appendChild(label);
     li.appendChild(group);
@@ -408,12 +450,20 @@ function buildPrompt() {
     dislikedItems.length > 0 ? dislikedItems.map((i) => `・${i.text}`).join("\n") : "（特になし）";
 
   const statusMap = loadWeekStatus();
-  const statusLabels = { with: "旦那いる", without: "旦那いない", none: "作らない" };
+  const members = loadFamilyMembers();
+  const memberById = new Map(members.map((m) => [m.id, m]));
   const days = getPeriodDates()
     .map((date) => {
       const dateKey = toDateKey(date);
-      const status = statusMap[dateKey];
-      return `${dateKey}: ${status ? statusLabels[status] : "未定"}`;
+      const entry = statusMap[dateKey];
+      if (!entry) return `${dateKey}: 未定`;
+      if (entry.cooking === false) return `${dateKey}: 作らない`;
+
+      const present = (entry.presentIds || []).map((id) => memberById.get(id)).filter(Boolean);
+      const adults = present.filter((m) => m.type === "adult").length;
+      const children = present.filter((m) => m.type === "child").length;
+      const names = present.map((m) => m.name).join("・") || "未選択";
+      return `${dateKey}: 大人${adults}人・子ども${children}人（${names}）`;
     })
     .join("\n");
 
@@ -430,9 +480,8 @@ function buildPrompt() {
 ・1歳の子どもも大人と同じ料理を取り分けて食べます。できるだけ薄味にしやすい、取り分けしやすい料理を中心に考えてください。
 ・子どもの鉄分摂取も意識して、赤身の肉やほうれん草、ひじき、あさりなど鉄分が多い食材を週に数回は取り入れてください。
 ・以下の「苦手な食材」は使わないでください。
-・「作らない」の日は献立を考えず、dish を null、ingredients を空配列にしてください。
-・「旦那いる」の日は大人2人＋子ども1人分、「旦那いない」の日は大人1人＋子ども1人分として、使う食材と分量を計算してください。
-・「旦那いない」の日は、品数が少なめの簡単な料理でも構いません。
+・「作らない」の日、または人数が0人や未選択の日は献立を考えず、dish を null、ingredients を空配列にしてください。
+・各日に書かれている人数（大人◯人・子ども◯人）に合わせて、使う食材と分量を計算してください。人数が少ない日は、品数が少なめの簡単な料理でも構いません。
 ・できるだけ無添加・手作りの味付けにしたいので、カレールーやシチューのルー、めんつゆの素などの市販の合わせ調味料はなるべく使わず、しょうゆ・みそ・砂糖などを組み合わせて一から味付けする料理を優先してください。
 ・以下の「今ある食材」は、できるだけ使い切れるように献立に組み込んでください（無理に全部使う必要はありません）。
 ・以下の「食べたいものメモ」の中から、期間中に自然に使えそうなものがあれば積極的に取り入れてください（すべて使う必要はありません）。

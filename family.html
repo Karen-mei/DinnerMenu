@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>家族構成 - 献立アプリ</title>
+<meta name="theme-color" content="#ff8a65">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="app-header">
+  <a href="index.html" class="back-link">← 戻る</a>
+  <h1>家族構成</h1>
+</header>
+
+<main>
+  <section class="card">
+    <p class="section-note">ここに登録した人が、「今週の予定」で日ごとに選べるようになります。大人/子どもの区分は、AIが考える食材の分量に使われます。</p>
+    <form id="family-form" class="stock-form">
+      <input type="text" id="family-name-input" placeholder="名前（例：パパ）" autocomplete="off" required>
+      <div class="stock-form-row">
+        <select id="family-type-input">
+          <option value="adult">大人</option>
+          <option value="child">子ども</option>
+        </select>
+        <button type="submit">追加</button>
+      </div>
+    </form>
+    <ul id="family-list" class="pantry-list"></ul>
+  </section>
+</main>
+
+<script src="js/family.js"></script>
+</body>
+</html>
