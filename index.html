@@ -28,6 +28,17 @@
   </section>
 
   <section class="card">
+    <h2>苦手な食材</h2>
+    <p class="section-note">ここに登録したものは、AIへの質問文で「使わないでください」として毎回伝えます。</p>
+    <form id="dislike-form" class="add-form">
+      <input type="text" id="dislike-input" placeholder="例：レバー" autocomplete="off" required>
+      <button type="submit">追加</button>
+    </form>
+    <ul id="dislike-list" class="wish-list"></ul>
+    <p id="dislike-empty-message" class="empty-message">まだ登録されていません。</p>
+  </section>
+
+  <section class="card">
     <h2>今週の予定</h2>
     <p class="section-note">日ごとに、晩ごはんの状況をタップで選んでください。買い物の日がずれるときは、開始日・終了日を変えれば好きな期間（例：木曜〜次の火曜）にできます（記録は消えないので、過去の期間も見返せます）。</p>
     <div class="period-controls">

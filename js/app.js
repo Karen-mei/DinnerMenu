@@ -64,6 +64,78 @@ form.addEventListener("submit", (event) => {
 
 render(loadWishes());
 
+// 「苦手な食材」機能
+// ここに登録したものは、毎回のAIへの質問文で「使わないでください」として伝える。
+const DISLIKE_STORAGE_KEY = "menuApp.dislikedIngredients";
+const DEFAULT_DISLIKED_INGREDIENTS = ["レバー"]; // 初回起動時のデフォルト
+
+const dislikeForm = document.getElementById("dislike-form");
+const dislikeInput = document.getElementById("dislike-input");
+const dislikeList = document.getElementById("dislike-list");
+const dislikeEmptyMessage = document.getElementById("dislike-empty-message");
+
+function loadDislikedIngredients() {
+  const raw = localStorage.getItem(DISLIKE_STORAGE_KEY);
+  if (!raw) {
+    const defaults = DEFAULT_DISLIKED_INGREDIENTS.map((text, i) => ({ id: i, text }));
+    localStorage.setItem(DISLIKE_STORAGE_KEY, JSON.stringify(defaults));
+    return defaults;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function saveDislikedIngredients(items) {
+  localStorage.setItem(DISLIKE_STORAGE_KEY, JSON.stringify(items));
+}
+
+function renderDislikes() {
+  const items = loadDislikedIngredients();
+  dislikeList.innerHTML = "";
+  dislikeEmptyMessage.style.display = items.length === 0 ? "block" : "none";
+
+  for (const item of items) {
+    const li = document.createElement("li");
+
+    const span = document.createElement("span");
+    span.className = "wish-text";
+    span.textContent = item.text;
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "delete-btn";
+    deleteBtn.textContent = "×";
+    deleteBtn.setAttribute("aria-label", "削除");
+    deleteBtn.addEventListener("click", () => {
+      const current = loadDislikedIngredients().filter((i) => i.id !== item.id);
+      saveDislikedIngredients(current);
+      renderDislikes();
+    });
+
+    li.appendChild(span);
+    li.appendChild(deleteBtn);
+    dislikeList.appendChild(li);
+  }
+}
+
+dislikeForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const text = dislikeInput.value.trim();
+  if (!text) return;
+
+  const items = loadDislikedIngredients();
+  items.unshift({ id: Date.now(), text });
+  saveDislikedIngredients(items);
+  renderDislikes();
+
+  dislikeInput.value = "";
+  dislikeInput.focus();
+});
+
+renderDislikes();
+
 // 「今ある食材」機能
 // 家にある食材（品名＋量）を書いておくと、AIへの質問文に含めて使い切りを提案してもらえる。
 // 買う食材リストからも自動で除外される。
@@ -378,6 +450,10 @@ function buildPrompt() {
       ? stockItems.map((i) => `・${i.name}${i.amount ? `（${i.amount}）` : ""}`).join("\n")
       : "（特になし）";
 
+  const dislikedItems = loadDislikedIngredients();
+  const dislikedText =
+    dislikedItems.length > 0 ? dislikedItems.map((i) => `・${i.text}`).join("\n") : "（特になし）";
+
   const statusMap = loadWeekStatus();
   const statusLabels = { with: "旦那いる", without: "旦那いない", none: "作らない" };
   const days = getPeriodDates()
@@ -399,7 +475,8 @@ function buildPrompt() {
 
 【条件】
 ・1歳の子どもも大人と同じ料理を取り分けて食べます。できるだけ薄味にしやすい、取り分けしやすい料理を中心に考えてください。
-・子どもの鉄分摂取も意識して、赤身の肉やレバー、ほうれん草、ひじき、あさりなど鉄分が多い食材を週に数回は取り入れてください。
+・子どもの鉄分摂取も意識して、赤身の肉やほうれん草、ひじき、あさりなど鉄分が多い食材を週に数回は取り入れてください。
+・以下の「苦手な食材」は使わないでください。
 ・「作らない」の日は献立を考えず、dish を null、ingredients を空配列にしてください。
 ・「旦那いる」の日は大人2人＋子ども1人分、「旦那いない」の日は大人1人＋子ども1人分として、使う食材と分量を計算してください。
 ・「旦那いない」の日は、品数が少なめの簡単な料理でも構いません。
@@ -410,6 +487,9 @@ function buildPrompt() {
 ・ingredients には、その日の料理に使う食材を全て入れてください（「今ある食材」で賄える分も、記録のためそのまま含めてください）。野菜だけでなく、肉・魚・調味料・加工品なども含めてください。各食材には name（食材名）、amount（分量、例: "300g"）、category（"肉・魚" "野菜" "調味料" "その他" のいずれか）、price（今の日本の物価を踏まえた概算の金額。円単位の数値。わからなければ0）を付けてください。
 ・メインの献立とは別に、週2品くらいを目安に副菜（取り分けしやすい小鉢料理など）も提案し、sideDishes に入れてください。
 ${extraInstructionBlock}
+【苦手な食材（使わないでください）】
+${dislikedText}
+
 【食べたいものメモ】
 ${wishText}
 
