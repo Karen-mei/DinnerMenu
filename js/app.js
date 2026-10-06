@@ -1,3 +1,18 @@
+// 「？」ボタン：このアプリについての説明パネル
+const infoBtn = document.getElementById("info-btn");
+const infoOverlay = document.getElementById("info-overlay");
+const infoCloseBtn = document.getElementById("info-close-btn");
+
+infoBtn.addEventListener("click", () => {
+  infoOverlay.hidden = false;
+});
+infoCloseBtn.addEventListener("click", () => {
+  infoOverlay.hidden = true;
+});
+infoOverlay.addEventListener("click", (event) => {
+  if (event.target === infoOverlay) infoOverlay.hidden = true;
+});
+
 // 「食べたいものメモ」機能
 // localStorage = スマホのブラウザの中にある保存場所。ページを閉じても消えない。
 const STORAGE_KEY = "menuApp.wishList";

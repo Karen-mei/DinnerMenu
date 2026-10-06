@@ -13,8 +13,23 @@
 </head>
 <body>
 <header class="app-header">
-  <h1>献立アプリ</h1>
+  <div class="header-title-row">
+    <h1>献立アプリ</h1>
+    <button type="button" id="info-btn" class="info-btn" aria-label="このアプリについて">？</button>
+  </div>
 </header>
+
+<div id="info-overlay" class="info-overlay" hidden>
+  <div class="info-panel">
+    <button type="button" id="info-close-btn" class="info-close-btn" aria-label="閉じる">×</button>
+    <h2>このアプリについて</h2>
+    <ul>
+      <li>入力したデータ（メモ・献立・家族構成などすべて）は、この端末のブラウザだけに保存されています。どこかのサーバーには送られません。</li>
+      <li>このURLを誰かに共有しても、あなたが入力した内容が相手に見えることはありません。相手が同じURLを開いても、空っぽの状態からの別物として動きます。</li>
+      <li>AIに過去のやり取りを覚えさせて、好みを学習していくような機能は今はありません。「食べたいものメモ」「苦手な食材」「追加の指示」など、今画面に入っている内容だけをもとに、そのつど新しく考えています。</li>
+    </ul>
+  </div>
+</div>
 
 <main>
   <section class="card">
