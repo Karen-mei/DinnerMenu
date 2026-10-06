@@ -171,6 +171,8 @@ const aiResponseInput = document.getElementById("ai-response-input");
 const loadMenuBtn = document.getElementById("load-menu-btn");
 const loadStatus = document.getElementById("load-status");
 const menuList = document.getElementById("menu-list");
+const shoppingList = document.getElementById("shopping-list");
+const shoppingEmpty = document.getElementById("shopping-empty");
 
 function buildPrompt() {
   const wishes = loadWishes();
@@ -191,10 +193,12 @@ function buildPrompt() {
 
 【条件】
 ・1歳の子どもも大人と同じ料理を取り分けて食べます。できるだけ薄味にしやすい、取り分けしやすい料理を中心に考えてください。
-・「作らない」の日は献立を考えず、dish を null にしてください。
+・「作らない」の日は献立を考えず、dish を null、vegetables を空配列にしてください。
+・「旦那いる」の日は大人2人＋子ども1人分、「旦那いない」の日は大人1人＋子ども1人分として、使う野菜と分量を計算してください。
 ・「旦那いない」の日は、品数が少なめの簡単な料理でも構いません。
 ・以下の「食べたいものメモ」の中から、1週間の中で自然に使えそうなものがあれば積極的に取り入れてください（すべて使う必要はありません）。
 ・同じ料理が1週間で重複しないようにしてください。
+・vegetables には、その日の料理に使う野菜だけを「野菜名 分量」の形式（例: "にんじん 1本"）で、1項目ずつ入れてください。
 
 【食べたいものメモ】
 ${wishText}
@@ -206,7 +210,7 @@ ${days}
 説明や前置きは一切不要です。次のJSON形式のみを出力してください。
 {
   "days": [
-    { "date": "YYYY-MM-DD", "dish": "料理名またはnull", "note": "一言メモ（10〜20文字程度、取り分けのコツなど）" }
+    { "date": "YYYY-MM-DD", "dish": "料理名またはnull", "note": "一言メモ（10〜20文字程度、取り分けのコツなど）", "vegetables": ["野菜名 分量", "野菜名 分量"] }
   ]
 }`;
 }
@@ -273,7 +277,11 @@ loadMenuBtn.addEventListener("click", () => {
   const menuMap = loadMenu();
   for (const day of parsed.days) {
     if (!day.date) continue;
-    menuMap[day.date] = { dish: day.dish || null, note: day.note || "" };
+    menuMap[day.date] = {
+      dish: day.dish || null,
+      note: day.note || "",
+      vegetables: Array.isArray(day.vegetables) ? day.vegetables.filter(Boolean) : [],
+    };
   }
   saveMenu(menuMap);
   renderMenu();
@@ -320,6 +328,8 @@ function renderMenu() {
 
     menuList.appendChild(li);
   }
+
+  renderShoppingList();
 }
 
 function startEditingDish(dateKey, date) {
@@ -340,6 +350,17 @@ function startEditingDish(dateKey, date) {
   input.placeholder = "料理名を入力（空にすると「作らない」になります）";
   li.appendChild(input);
 
+  const vegLabel = document.createElement("span");
+  vegLabel.className = "menu-veg-label";
+  vegLabel.textContent = "買う野菜（1行に1つ。例: にんじん 1本）";
+  li.appendChild(vegLabel);
+
+  const vegInput = document.createElement("textarea");
+  vegInput.className = "menu-veg-input";
+  vegInput.rows = 2;
+  vegInput.value = (entry.vegetables || []).join("\n");
+  li.appendChild(vegInput);
+
   // 既存のその日の表示を、この編集中の表示に差し替える
   const existingLi = [...menuList.children].find((child) => child.dataset.dateKey === dateKey);
   if (existingLi) {
@@ -352,18 +373,72 @@ function startEditingDish(dateKey, date) {
     saved = true;
     const current = loadMenu();
     const newDish = input.value.trim();
-    current[dateKey] = { ...current[dateKey], dish: newDish || null };
+    const newVegetables = vegInput.value
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    current[dateKey] = { ...current[dateKey], dish: newDish || null, vegetables: newVegetables };
     saveMenu(current);
     renderMenu();
   }
 
-  input.addEventListener("blur", commit);
   input.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") input.blur();
+    if (event.key === "Enter") event.preventDefault();
+  });
+  input.addEventListener("blur", (event) => {
+    if (event.relatedTarget !== vegInput) commit();
+  });
+  vegInput.addEventListener("blur", (event) => {
+    if (event.relatedTarget !== input) commit();
   });
 
   input.focus();
   input.select();
+}
+
+function parseVegLine(line) {
+  const match = line.match(/^(\S+)\s*(.*)$/);
+  if (!match) return { name: line, amount: "" };
+  return { name: match[1], amount: match[2].trim() };
+}
+
+function renderShoppingList() {
+  const menuMap = loadMenu();
+  const grouped = new Map(); // 野菜名 -> [{ dayLabel, amount }]
+
+  for (const date of getThisWeekDates()) {
+    const entry = menuMap[toDateKey(date)];
+    if (!entry || !entry.vegetables) continue;
+
+    const dayLabel = DAY_LABELS[(date.getDay() + 6) % 7];
+    for (const line of entry.vegetables) {
+      const { name, amount } = parseVegLine(line);
+      if (!name) continue;
+      if (!grouped.has(name)) grouped.set(name, []);
+      grouped.get(name).push({ dayLabel, amount });
+    }
+  }
+
+  shoppingList.innerHTML = "";
+  shoppingEmpty.style.display = grouped.size === 0 ? "block" : "none";
+
+  for (const [name, items] of grouped) {
+    const li = document.createElement("li");
+
+    const nameLabel = document.createElement("span");
+    nameLabel.className = "shopping-name";
+    nameLabel.textContent = name;
+    li.appendChild(nameLabel);
+
+    const detailLabel = document.createElement("span");
+    detailLabel.className = "shopping-detail";
+    detailLabel.textContent = items
+      .map((item) => (item.amount ? `${item.dayLabel} ${item.amount}` : item.dayLabel))
+      .join(" ・ ");
+    li.appendChild(detailLabel);
+
+    shoppingList.appendChild(li);
+  }
 }
 
 renderMenu();

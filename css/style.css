@@ -292,3 +292,49 @@ main .card + .card {
   font-size: 0.8rem;
   color: #999;
 }
+
+.menu-veg-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #bbb;
+  margin-top: 2px;
+}
+
+.menu-veg-input {
+  display: block;
+  width: 100%;
+  font-size: 0.85rem;
+  padding: 6px;
+  margin: 4px 0 2px -6px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.shopping-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.shopping-list li {
+  padding: 8px 0;
+  border-bottom: 1px solid #f0e8e0;
+}
+
+.shopping-list li:last-child {
+  border-bottom: none;
+}
+
+.shopping-name {
+  display: block;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.shopping-detail {
+  display: block;
+  font-size: 0.8rem;
+  color: #888;
+}
