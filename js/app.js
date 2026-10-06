@@ -188,9 +188,9 @@ function loadPantry() {
 // 「家族構成」のデータ読み書き（画面はfamily.htmlの方にある）
 const FAMILY_STORAGE_KEY = "menuApp.familyMembers";
 const DEFAULT_FAMILY_MEMBERS = [
-  { id: 0, name: "ママ", type: "adult" },
-  { id: 1, name: "パパ", type: "adult" },
-  { id: 2, name: "子ども", type: "child" },
+  { id: 0, name: "ママ", type: "adult", phase: "" },
+  { id: 1, name: "パパ", type: "adult", phase: "" },
+  { id: 2, name: "子ども", type: "child", phase: "幼児食（大人の半分程度）" },
 ];
 
 function loadFamilyMembers() {
@@ -462,7 +462,10 @@ function buildPrompt() {
       const present = (entry.presentIds || []).map((id) => memberById.get(id)).filter(Boolean);
       const adults = present.filter((m) => m.type === "adult").length;
       const children = present.filter((m) => m.type === "child").length;
-      const names = present.map((m) => m.name).join("・") || "未選択";
+      const names =
+        present
+          .map((m) => (m.type === "child" && m.phase ? `${m.name}【${m.phase}】` : m.name))
+          .join("・") || "未選択";
       return `${dateKey}: 大人${adults}人・子ども${children}人（${names}）`;
     })
     .join("\n");
@@ -482,6 +485,7 @@ function buildPrompt() {
 ・以下の「苦手な食材」は使わないでください。
 ・「作らない」の日、または人数が0人や未選択の日は献立を考えず、dish を null、ingredients を空配列にしてください。
 ・各日に書かれている人数（大人◯人・子ども◯人）に合わせて、使う食材と分量を計算してください。人数が少ない日は、品数が少なめの簡単な料理でも構いません。
+・子どもの名前の後ろに【】で食べる量の段階が書かれている場合は、その段階（離乳食初期〜ほぼ大人と同じ量）に応じて、その子ども分の食材量を加減してください。
 ・できるだけ無添加・手作りの味付けにしたいので、カレールーやシチューのルー、めんつゆの素などの市販の合わせ調味料はなるべく使わず、しょうゆ・みそ・砂糖などを組み合わせて一から味付けする料理を優先してください。
 ・以下の「今ある食材」は、できるだけ使い切れるように献立に組み込んでください（無理に全部使う必要はありません）。
 ・以下の「食べたいものメモ」の中から、期間中に自然に使えそうなものがあれば積極的に取り入れてください（すべて使う必要はありません）。

@@ -2,15 +2,20 @@
 // ここで登録した人が、トップ画面の「今週の予定」で日ごとに選べるようになる。
 const FAMILY_STORAGE_KEY = "menuApp.familyMembers";
 const DEFAULT_FAMILY_MEMBERS = [
-  { id: 0, name: "ママ", type: "adult" },
-  { id: 1, name: "パパ", type: "adult" },
-  { id: 2, name: "子ども", type: "child" },
+  { id: 0, name: "ママ", type: "adult", phase: "" },
+  { id: 1, name: "パパ", type: "adult", phase: "" },
+  { id: 2, name: "子ども", type: "child", phase: "幼児食（大人の半分程度）" },
 ];
 
 const familyForm = document.getElementById("family-form");
 const familyNameInput = document.getElementById("family-name-input");
 const familyTypeInput = document.getElementById("family-type-input");
+const familyPhaseInput = document.getElementById("family-phase-input");
 const familyList = document.getElementById("family-list");
+
+familyTypeInput.addEventListener("change", () => {
+  familyPhaseInput.hidden = familyTypeInput.value !== "child";
+});
 
 function loadFamilyMembers() {
   const raw = localStorage.getItem(FAMILY_STORAGE_KEY);
@@ -38,7 +43,9 @@ function renderFamily() {
 
     const nameLabel = document.createElement("span");
     nameLabel.className = "pantry-name";
-    nameLabel.textContent = `${member.name}（${member.type === "adult" ? "大人" : "子ども"}）`;
+    const typeLabel = member.type === "adult" ? "大人" : "子ども";
+    const phaseLabel = member.type === "child" && member.phase ? `・${member.phase}` : "";
+    nameLabel.textContent = `${member.name}（${typeLabel}${phaseLabel}）`;
     li.appendChild(nameLabel);
 
     const deleteBtn = document.createElement("button");
@@ -61,13 +68,17 @@ familyForm.addEventListener("submit", (event) => {
   const name = familyNameInput.value.trim();
   if (!name) return;
   const type = familyTypeInput.value === "child" ? "child" : "adult";
+  const phase = type === "child" ? familyPhaseInput.value : "";
 
   const members = loadFamilyMembers();
-  members.push({ id: Date.now(), name, type });
+  members.push({ id: Date.now(), name, type, phase });
   saveFamilyMembers(members);
   renderFamily();
 
   familyNameInput.value = "";
+  familyTypeInput.value = "adult";
+  familyPhaseInput.value = "";
+  familyPhaseInput.hidden = true;
   familyNameInput.focus();
 });
 
