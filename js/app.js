@@ -64,20 +64,16 @@ form.addEventListener("submit", (event) => {
 
 render(loadWishes());
 
-// 「苦手な食材」機能
+// 「苦手な食材」のデータ読み書き（画面はdislikes.htmlの方にある）
 // ここに登録したものは、毎回のAIへの質問文で「使わないでください」として伝える。
+// 「いつまで」が設定されていて、その日を過ぎていたら対象外にする（妊娠中だけNG、等）。
 const DISLIKE_STORAGE_KEY = "menuApp.dislikedIngredients";
-const DEFAULT_DISLIKED_INGREDIENTS = ["レバー"]; // 初回起動時のデフォルト
-
-const dislikeForm = document.getElementById("dislike-form");
-const dislikeInput = document.getElementById("dislike-input");
-const dislikeList = document.getElementById("dislike-list");
-const dislikeEmptyMessage = document.getElementById("dislike-empty-message");
+const DEFAULT_DISLIKED_INGREDIENTS = ["レバー", "加工肉", "ベーコン"];
 
 function loadDislikedIngredients() {
   const raw = localStorage.getItem(DISLIKE_STORAGE_KEY);
   if (!raw) {
-    const defaults = DEFAULT_DISLIKED_INGREDIENTS.map((text, i) => ({ id: i, text }));
+    const defaults = DEFAULT_DISLIKED_INGREDIENTS.map((text, i) => ({ id: i, text, until: "" }));
     localStorage.setItem(DISLIKE_STORAGE_KEY, JSON.stringify(defaults));
     return defaults;
   }
@@ -88,53 +84,10 @@ function loadDislikedIngredients() {
   }
 }
 
-function saveDislikedIngredients(items) {
-  localStorage.setItem(DISLIKE_STORAGE_KEY, JSON.stringify(items));
+function loadActiveDislikedIngredients() {
+  const todayKeyValue = toDateKey(new Date());
+  return loadDislikedIngredients().filter((item) => !item.until || item.until >= todayKeyValue);
 }
-
-function renderDislikes() {
-  const items = loadDislikedIngredients();
-  dislikeList.innerHTML = "";
-  dislikeEmptyMessage.style.display = items.length === 0 ? "block" : "none";
-
-  for (const item of items) {
-    const li = document.createElement("li");
-
-    const span = document.createElement("span");
-    span.className = "wish-text";
-    span.textContent = item.text;
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.className = "delete-btn";
-    deleteBtn.textContent = "×";
-    deleteBtn.setAttribute("aria-label", "削除");
-    deleteBtn.addEventListener("click", () => {
-      const current = loadDislikedIngredients().filter((i) => i.id !== item.id);
-      saveDislikedIngredients(current);
-      renderDislikes();
-    });
-
-    li.appendChild(span);
-    li.appendChild(deleteBtn);
-    dislikeList.appendChild(li);
-  }
-}
-
-dislikeForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const text = dislikeInput.value.trim();
-  if (!text) return;
-
-  const items = loadDislikedIngredients();
-  items.unshift({ id: Date.now(), text });
-  saveDislikedIngredients(items);
-  renderDislikes();
-
-  dislikeInput.value = "";
-  dislikeInput.focus();
-});
-
-renderDislikes();
 
 // 「今ある食材」機能
 // 家にある食材（品名＋量）を書いておくと、AIへの質問文に含めて使い切りを提案してもらえる。
@@ -450,7 +403,7 @@ function buildPrompt() {
       ? stockItems.map((i) => `・${i.name}${i.amount ? `（${i.amount}）` : ""}`).join("\n")
       : "（特になし）";
 
-  const dislikedItems = loadDislikedIngredients();
+  const dislikedItems = loadActiveDislikedIngredients();
   const dislikedText =
     dislikedItems.length > 0 ? dislikedItems.map((i) => `・${i.text}`).join("\n") : "（特になし）";
 

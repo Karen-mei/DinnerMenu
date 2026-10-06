@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>苦手な食材 - 献立アプリ</title>
+<meta name="theme-color" content="#ff8a65">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="app-header">
+  <a href="index.html" class="back-link">← 戻る</a>
+  <h1>苦手な食材</h1>
+</header>
+
+<main>
+  <section class="card">
+    <p class="section-note">ここに登録したものは、AIへの質問文で「使わないでください」として毎回伝えます。「いつまで」を入れておくと、その日を過ぎたら自動的に対象から外れます（妊娠中だけNG、などの一時的なものに）。空欄ならずっと有効です。</p>
+    <form id="dislike-form" class="stock-form">
+      <input type="text" id="dislike-name-input" placeholder="品名（例：レバー）" autocomplete="off" required>
+      <div class="stock-form-row">
+        <input type="date" id="dislike-until-input" aria-label="いつまで（任意）">
+        <button type="submit">追加</button>
+      </div>
+    </form>
+    <ul id="dislike-list" class="pantry-list"></ul>
+    <p id="dislike-empty-message" class="empty-message">まだ登録されていません。</p>
+  </section>
+</main>
+
+<script src="js/dislikes.js"></script>
+</body>
+</html>

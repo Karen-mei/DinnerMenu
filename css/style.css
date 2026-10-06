@@ -520,3 +520,7 @@ main .card + .card {
 .pantry-list li:not(.has-it) .pantry-name {
   color: #d32f2f;
 }
+
+.pantry-list li.is-expired .pantry-name {
+  color: #bbb;
+}
