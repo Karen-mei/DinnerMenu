@@ -29,11 +29,15 @@
 
   <section class="card">
     <h2>今週の予定</h2>
-    <p class="section-note">日ごとに、晩ごはんの状況をタップで選んでください。買い物の日がずれるときは、下の日付や矢印で表示する期間を変えられます（記録は消えないので、過去の期間も見返せます）。</p>
+    <p class="section-note">日ごとに、晩ごはんの状況をタップで選んでください。買い物の日がずれるときは、開始日・終了日を変えれば好きな期間（例：木曜〜次の火曜）にできます（記録は消えないので、過去の期間も見返せます）。</p>
     <div class="period-controls">
-      <button type="button" id="prev-period-btn" aria-label="前の期間">← 前へ</button>
       <input type="date" id="period-start-input" aria-label="期間の開始日">
-      <button type="button" id="next-period-btn" aria-label="次の期間">次へ →</button>
+      <span class="period-tilde">〜</span>
+      <input type="date" id="period-end-input" aria-label="期間の終了日">
+    </div>
+    <div class="period-nav">
+      <button type="button" id="prev-period-btn">← 前の期間</button>
+      <button type="button" id="next-period-btn">次の期間 →</button>
     </div>
     <ul id="week-list" class="week-list"></ul>
   </section>
@@ -80,12 +84,23 @@
     </div>
 
     <ul id="menu-list" class="menu-list"></ul>
+
+    <p class="ai-step-title side-dish-title">副菜の提案</p>
+    <ul id="side-dish-list" class="menu-list"></ul>
+    <p id="side-dish-empty" class="empty-message">まだありません。</p>
   </section>
 
   <section class="card">
     <h2>買う食材リスト</h2>
-    <p class="section-note">献立から自動でまとめます。肉・魚 → 野菜 → その他 → 調味料の順に並びます。調味料マスタで「家にある」ものと、「今ある食材」に登録したものは除外されます。</p>
+    <p class="section-note">献立から自動でまとめます。肉・魚 → 野菜 → その他 → 調味料の順に並びます。調味料マスタで「家にある」ものと、「今ある食材」に登録したものは除外されます。できるだけ合計の量も表示します。</p>
     <p id="budget-estimate" class="budget-estimate"></p>
+    <form id="extra-shopping-form" class="stock-form">
+      <input type="text" id="extra-shopping-name-input" placeholder="ほしいもの（例：ラップ）" autocomplete="off" required>
+      <div class="stock-form-row">
+        <input type="text" id="extra-shopping-amount-input" placeholder="量（任意）" autocomplete="off">
+        <button type="submit">追加</button>
+      </div>
+    </form>
     <ul id="shopping-list" class="shopping-list"></ul>
     <p id="shopping-empty" class="empty-message">まだ食材の情報がありません。</p>
     <a href="pantry.html" class="nav-link-btn">調味料マスタを編集する →</a>

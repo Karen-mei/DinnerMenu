@@ -164,8 +164,19 @@ main .card + .card {
   min-width: 0;
 }
 
-.period-controls button {
+.period-tilde {
+  color: #999;
   flex-shrink: 0;
+}
+
+.period-nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.period-nav button {
+  flex: 1;
   padding: 8px 10px;
   font-size: 0.85rem;
   background: white;
@@ -175,8 +186,12 @@ main .card + .card {
   cursor: pointer;
 }
 
-.period-controls button:active {
+.period-nav button:active {
   background: #fff0e8;
+}
+
+.side-dish-title {
+  margin-top: 16px;
 }
 
 .stock-form {

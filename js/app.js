@@ -179,9 +179,16 @@ function toDateKey(date) {
   return `${y}-${m}-${d}`;
 }
 
-// 表示する期間（7日間）。買い物の日がずれても前後に動かせるように、
-// 「今週固定」ではなく開始日を保存しておく方式にしている。
+// 表示する期間（開始日〜終了日）。買い物の日がずれても前後に動かせるように、
+// 「今週固定」ではなく開始日・終了日を保存しておく方式にしている。
+// 例えば「木曜〜次の火曜」のような、月曜始まりではない期間にもできる。
 const PERIOD_STORAGE_KEY = "menuApp.periodStart";
+const PERIOD_END_STORAGE_KEY = "menuApp.periodEnd";
+
+function parseDateKey(dateKey) {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
 
 function getDefaultPeriodStart() {
   const today = new Date();
@@ -200,15 +207,31 @@ function savePeriodStart(dateKey) {
   localStorage.setItem(PERIOD_STORAGE_KEY, dateKey);
 }
 
+function loadPeriodEnd() {
+  const saved = localStorage.getItem(PERIOD_END_STORAGE_KEY);
+  if (saved && parseDateKey(saved) >= parseDateKey(loadPeriodStart())) return saved;
+  // 保存がない・開始日より前になってしまっている場合は、開始日から6日後（7日間）にする
+  const start = parseDateKey(loadPeriodStart());
+  const fallback = new Date(start);
+  fallback.setDate(start.getDate() + 6);
+  return toDateKey(fallback);
+}
+
+function savePeriodEnd(dateKey) {
+  localStorage.setItem(PERIOD_END_STORAGE_KEY, dateKey);
+}
+
+function getPeriodKey() {
+  return `${loadPeriodStart()}_${loadPeriodEnd()}`;
+}
+
 function getPeriodDates() {
-  const [y, m, d] = loadPeriodStart().split("-").map(Number);
-  const start = new Date(y, m - 1, d);
+  const start = parseDateKey(loadPeriodStart());
+  const end = parseDateKey(loadPeriodEnd());
 
   const dates = [];
-  for (let i = 0; i < 7; i++) {
-    const dt = new Date(start);
-    dt.setDate(start.getDate() + i);
-    dates.push(dt);
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    dates.push(new Date(d));
   }
   return dates;
 }
@@ -271,34 +294,56 @@ function renderWeek() {
 
 renderWeek();
 
-// 期間コントロール（前へ/次へ/日付指定）
+// 期間コントロール（開始日・終了日・前の期間/次の期間）
 const periodStartInput = document.getElementById("period-start-input");
+const periodEndInput = document.getElementById("period-end-input");
 const prevPeriodBtn = document.getElementById("prev-period-btn");
 const nextPeriodBtn = document.getElementById("next-period-btn");
 
 function refreshPeriodInput() {
   periodStartInput.value = loadPeriodStart();
+  periodEndInput.value = loadPeriodEnd();
 }
 
 function renderAll() {
   renderWeek();
   renderMenu(); // この中でrenderShoppingList()も呼ばれる
   renderPeriodNotes();
+  renderSideDishes();
 }
 
-function shiftPeriod(days) {
-  const start = getPeriodDates()[0];
-  start.setDate(start.getDate() + days);
-  savePeriodStart(toDateKey(start));
+function shiftPeriod(direction) {
+  const dates = getPeriodDates();
+  const lengthDays = dates.length;
+  const newStart = new Date(dates[0]);
+  newStart.setDate(newStart.getDate() + direction * lengthDays);
+  const newEnd = new Date(newStart);
+  newEnd.setDate(newStart.getDate() + lengthDays - 1);
+
+  savePeriodStart(toDateKey(newStart));
+  savePeriodEnd(toDateKey(newEnd));
   refreshPeriodInput();
   renderAll();
 }
 
-prevPeriodBtn.addEventListener("click", () => shiftPeriod(-7));
-nextPeriodBtn.addEventListener("click", () => shiftPeriod(7));
+prevPeriodBtn.addEventListener("click", () => shiftPeriod(-1));
+nextPeriodBtn.addEventListener("click", () => shiftPeriod(1));
 periodStartInput.addEventListener("change", () => {
   if (!periodStartInput.value) return;
   savePeriodStart(periodStartInput.value);
+  if (parseDateKey(loadPeriodEnd()) < parseDateKey(periodStartInput.value)) {
+    savePeriodEnd(periodStartInput.value);
+  }
+  refreshPeriodInput();
+  renderAll();
+});
+periodEndInput.addEventListener("change", () => {
+  if (!periodEndInput.value) return;
+  if (parseDateKey(periodEndInput.value) < parseDateKey(loadPeriodStart())) {
+    periodEndInput.value = loadPeriodEnd();
+    return;
+  }
+  savePeriodEnd(periodEndInput.value);
   renderAll();
 });
 
@@ -348,18 +393,22 @@ function buildPrompt() {
     ? `\n【追加の指示】\n${extraInstruction}\n`
     : "";
 
-  return `あなたは家庭料理の献立を考える専門家です。以下の条件で1週間分の晩ごはんの献立を提案してください。
+  const dayCount = getPeriodDates().length;
+
+  return `あなたは家庭料理の献立を考える専門家です。以下の条件で、指定された期間（${dayCount}日間）分の晩ごはんの献立を提案してください。
 
 【条件】
 ・1歳の子どもも大人と同じ料理を取り分けて食べます。できるだけ薄味にしやすい、取り分けしやすい料理を中心に考えてください。
+・子どもの鉄分摂取も意識して、赤身の肉やレバー、ほうれん草、ひじき、あさりなど鉄分が多い食材を週に数回は取り入れてください。
 ・「作らない」の日は献立を考えず、dish を null、ingredients を空配列にしてください。
 ・「旦那いる」の日は大人2人＋子ども1人分、「旦那いない」の日は大人1人＋子ども1人分として、使う食材と分量を計算してください。
 ・「旦那いない」の日は、品数が少なめの簡単な料理でも構いません。
 ・できるだけ無添加・手作りの味付けにしたいので、カレールーやシチューのルー、めんつゆの素などの市販の合わせ調味料はなるべく使わず、しょうゆ・みそ・砂糖などを組み合わせて一から味付けする料理を優先してください。
 ・以下の「今ある食材」は、できるだけ使い切れるように献立に組み込んでください（無理に全部使う必要はありません）。
-・以下の「食べたいものメモ」の中から、1週間の中で自然に使えそうなものがあれば積極的に取り入れてください（すべて使う必要はありません）。
-・同じ料理が1週間で重複しないようにしてください。
+・以下の「食べたいものメモ」の中から、期間中に自然に使えそうなものがあれば積極的に取り入れてください（すべて使う必要はありません）。
+・同じ料理が期間中に重複しないようにしてください。
 ・ingredients には、その日の料理に使う食材を全て入れてください（「今ある食材」で賄える分も、記録のためそのまま含めてください）。野菜だけでなく、肉・魚・調味料・加工品なども含めてください。各食材には name（食材名）、amount（分量、例: "300g"）、category（"肉・魚" "野菜" "調味料" "その他" のいずれか）、price（今の日本の物価を踏まえた概算の金額。円単位の数値。わからなければ0）を付けてください。
+・メインの献立とは別に、週2品くらいを目安に副菜（取り分けしやすい小鉢料理など）も提案し、sideDishes に入れてください。
 ${extraInstructionBlock}
 【食べたいものメモ】
 ${wishText}
@@ -382,6 +431,9 @@ ${days}
         { "name": "食材名", "amount": "分量", "category": "肉・魚", "price": 300 }
       ]
     }
+  ],
+  "sideDishes": [
+    { "dish": "副菜名", "note": "一言メモ" }
   ]
 }`;
 }
@@ -435,13 +487,13 @@ function loadAllPeriodNotes() {
 
 function renderPeriodNotes() {
   const all = loadAllPeriodNotes();
-  periodNotesInput.value = all[loadPeriodStart()] || "";
+  periodNotesInput.value = all[getPeriodKey()] || "";
 }
 
 periodNotesInput.addEventListener("blur", () => {
   const all = loadAllPeriodNotes();
   const text = periodNotesInput.value.trim();
-  const periodKey = loadPeriodStart();
+  const periodKey = getPeriodKey();
   if (text) {
     all[periodKey] = text;
   } else {
@@ -451,6 +503,53 @@ periodNotesInput.addEventListener("blur", () => {
 });
 
 renderPeriodNotes();
+
+// AIが提案する「副菜」（期間ごとに保存）
+const SIDE_DISH_KEY = "menuApp.sideDishes";
+const sideDishList = document.getElementById("side-dish-list");
+const sideDishEmpty = document.getElementById("side-dish-empty");
+
+function loadAllSideDishes() {
+  const raw = localStorage.getItem(SIDE_DISH_KEY);
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function saveSideDishesForPeriod(periodKey, dishes) {
+  const all = loadAllSideDishes();
+  all[periodKey] = dishes;
+  localStorage.setItem(SIDE_DISH_KEY, JSON.stringify(all));
+}
+
+function renderSideDishes() {
+  const dishes = loadAllSideDishes()[getPeriodKey()] || [];
+  sideDishList.innerHTML = "";
+  sideDishEmpty.style.display = dishes.length === 0 ? "block" : "none";
+
+  for (const dish of dishes) {
+    const li = document.createElement("li");
+
+    const dishLabel = document.createElement("span");
+    dishLabel.className = "menu-dish-btn";
+    dishLabel.textContent = dish.dish || "";
+    li.appendChild(dishLabel);
+
+    if (dish.note) {
+      const noteLabel = document.createElement("span");
+      noteLabel.className = "menu-note";
+      noteLabel.textContent = dish.note;
+      li.appendChild(noteLabel);
+    }
+
+    sideDishList.appendChild(li);
+  }
+}
+
+renderSideDishes();
 
 function loadMenu() {
   const raw = localStorage.getItem(MENU_STORAGE_KEY);
@@ -505,6 +604,11 @@ loadMenuBtn.addEventListener("click", () => {
   }
   saveMenu(menuMap);
   renderMenu();
+
+  if (Array.isArray(parsed.sideDishes)) {
+    saveSideDishesForPeriod(getPeriodKey(), parsed.sideDishes.filter((d) => d && d.dish));
+    renderSideDishes();
+  }
 
   loadStatus.textContent = "読み込みました。下に献立が表示されています。";
   loadStatus.classList.remove("is-error");
@@ -625,19 +729,127 @@ function startEditingDish(dateKey, date) {
 // 肉や魚 → 野菜 → その他 → 調味料 の順で買う食材リストに並べる
 const CATEGORY_ORDER = ["肉・魚", "野菜", "その他", "調味料"];
 
+// AIや手入力で表記がゆれやすい食材名（ひらがな/漢字など）を、調味料マスタ・在庫と
+// 正しく照合できるようにまとめる。グループの先頭が表示・照合に使う代表名になる。
+const INGREDIENT_SYNONYMS = [
+  ["醤油", "しょうゆ", "しょう油", "醬油"],
+  ["味噌", "みそ", "お味噌"],
+  ["料理酒", "酒", "清酒", "日本酒"],
+  ["ごま油", "胡麻油"],
+  ["こしょう", "胡椒", "コショウ"],
+  ["だしの素", "出汁の素", "顆粒だし"],
+  ["片栗粉", "かたくり粉"],
+];
+
+function canonicalizeIngredientName(name) {
+  const trimmed = (name || "").trim();
+  for (const group of INGREDIENT_SYNONYMS) {
+    if (group.includes(trimmed)) return group[0];
+  }
+  return trimmed;
+}
+
 function normalizeIngredient(item) {
   if (typeof item === "string") {
     const match = item.match(/^(\S+)\s*(.*)$/);
-    const name = match ? match[1] : item;
+    const name = canonicalizeIngredientName(match ? match[1] : item);
     const amount = match ? match[2].trim() : "";
     return { name, amount, category: "その他", price: 0 };
   }
-  const name = (item && item.name) || "";
+  const name = canonicalizeIngredientName((item && item.name) || "");
   const amount = (item && item.amount) || "";
   const category = CATEGORY_ORDER.includes(item && item.category) ? item.category : "その他";
   const price = Number.isFinite(item && item.price) ? item.price : 0;
   return { name, amount, category, price };
 }
+
+// 「2本」「300g」「大さじ2」のような分量を、できる範囲で数値として読み取る。
+// 単位が同じもの同士だけ合計できる（単位が違う・読み取れないものが混ざっていたら合計はしない）。
+function parseAmount(amount) {
+  if (!amount) return null;
+  const trimmed = amount.trim();
+
+  // 「2本」「300g」「1/2個」のように数字が先にあるパターン
+  let match = trimmed.match(/^(\d+\/\d+|\d+(?:\.\d+)?)\s*(\S*)$/);
+  if (match) {
+    let value;
+    if (match[1].includes("/")) {
+      const [a, b] = match[1].split("/").map(Number);
+      value = b ? a / b : NaN;
+    } else {
+      value = parseFloat(match[1]);
+    }
+    if (Number.isNaN(value)) return null;
+    return { value, unit: match[2] || "" };
+  }
+
+  // 「大さじ2」「小さじ1」のように数字が後ろにあるパターン
+  match = trimmed.match(/^(\D+?)(\d+(?:\.\d+)?)$/);
+  if (match) {
+    const value = parseFloat(match[2]);
+    if (Number.isNaN(value)) return null;
+    return { value, unit: match[1] };
+  }
+
+  return null;
+}
+
+function sumAmounts(amounts) {
+  const nonEmpty = amounts.filter(Boolean);
+  if (nonEmpty.length === 0) return null;
+
+  const parsed = nonEmpty.map(parseAmount);
+  if (parsed.some((p) => !p)) return null;
+
+  const unit = parsed[0].unit;
+  if (!parsed.every((p) => p.unit === unit)) return null;
+
+  const total = Math.round(parsed.reduce((sum, p) => sum + p.value, 0) * 100) / 100;
+  return `${total}${unit}`;
+}
+
+// 「ほしいもの」を自分で買う食材リストに手動で追加する機能（期間ごとに保存）
+const EXTRA_SHOPPING_KEY = "menuApp.extraShoppingItems";
+const extraShoppingForm = document.getElementById("extra-shopping-form");
+const extraShoppingNameInput = document.getElementById("extra-shopping-name-input");
+const extraShoppingAmountInput = document.getElementById("extra-shopping-amount-input");
+
+function loadAllExtraShoppingItems() {
+  const raw = localStorage.getItem(EXTRA_SHOPPING_KEY);
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function loadExtraShoppingItems(periodKey) {
+  return loadAllExtraShoppingItems()[periodKey] || [];
+}
+
+function saveExtraShoppingItems(periodKey, items) {
+  const all = loadAllExtraShoppingItems();
+  all[periodKey] = items;
+  localStorage.setItem(EXTRA_SHOPPING_KEY, JSON.stringify(all));
+}
+
+extraShoppingForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const name = extraShoppingNameInput.value.trim();
+  if (!name) return;
+  const amount = extraShoppingAmountInput.value.trim();
+
+  const periodKey = getPeriodKey();
+  const items = loadExtraShoppingItems(periodKey);
+  items.push({ id: Date.now(), name, amount });
+  saveExtraShoppingItems(periodKey, items);
+  renderShoppingList();
+
+  extraShoppingNameInput.value = "";
+  extraShoppingAmountInput.value = "";
+  extraShoppingNameInput.focus();
+});
 
 const SHOPPING_CHECKED_KEY = "menuApp.shoppingChecked";
 
@@ -675,19 +887,68 @@ function renderShoppingList() {
 
   // 調味料マスタで「家にある」ものと、「今ある食材」に登録済みのものは買う食材リストから除く
   const excludeSet = new Set([
-    ...loadPantry().filter((item) => item.hasIt).map((item) => item.name),
-    ...loadStock().map((item) => item.name),
+    ...loadPantry().filter((item) => item.hasIt).map((item) => canonicalizeIngredientName(item.name)),
+    ...loadStock().map((item) => canonicalizeIngredientName(item.name)),
   ]);
   for (const name of excludeSet) {
     grouped.delete(name);
   }
 
   shoppingList.innerHTML = "";
-  shoppingEmpty.style.display = grouped.size === 0 ? "block" : "none";
 
   const checkedMap = loadShoppingChecked();
+  const extraItems = loadExtraShoppingItems(getPeriodKey());
+
+  shoppingEmpty.style.display = grouped.size === 0 && extraItems.length === 0 ? "block" : "none";
 
   let totalBudget = 0;
+
+  function appendShoppingRow(name, detailText, { deletable, onDelete } = {}) {
+    const li = document.createElement("li");
+    li.className = "shopping-item";
+    if (checkedMap[name]) li.classList.add("is-checked");
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "shopping-checkbox";
+    checkbox.checked = Boolean(checkedMap[name]);
+    checkbox.setAttribute("aria-label", `${name}を買った`);
+    checkbox.addEventListener("change", () => {
+      const current = loadShoppingChecked();
+      current[name] = checkbox.checked;
+      saveShoppingChecked(current);
+      li.classList.toggle("is-checked", checkbox.checked);
+    });
+    li.appendChild(checkbox);
+
+    const textWrap = document.createElement("span");
+    textWrap.className = "shopping-text";
+
+    const nameLabel = document.createElement("span");
+    nameLabel.className = "shopping-name";
+    nameLabel.textContent = name;
+    textWrap.appendChild(nameLabel);
+
+    if (detailText) {
+      const detailLabel = document.createElement("span");
+      detailLabel.className = "shopping-detail";
+      detailLabel.textContent = detailText;
+      textWrap.appendChild(detailLabel);
+    }
+
+    li.appendChild(textWrap);
+
+    if (deletable) {
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "delete-btn";
+      deleteBtn.textContent = "×";
+      deleteBtn.setAttribute("aria-label", "削除");
+      deleteBtn.addEventListener("click", onDelete);
+      li.appendChild(deleteBtn);
+    }
+
+    shoppingList.appendChild(li);
+  }
 
   for (const category of CATEGORY_ORDER) {
     const entries = [...grouped].filter(([, value]) => value.category === category);
@@ -702,43 +963,35 @@ function renderShoppingList() {
       const itemTotal = items.reduce((sum, item) => sum + (item.price || 0), 0);
       totalBudget += itemTotal;
 
-      const li = document.createElement("li");
-      li.className = "shopping-item";
-      if (checkedMap[name]) li.classList.add("is-checked");
-
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.className = "shopping-checkbox";
-      checkbox.checked = Boolean(checkedMap[name]);
-      checkbox.setAttribute("aria-label", `${name}を買った`);
-      checkbox.addEventListener("change", () => {
-        const current = loadShoppingChecked();
-        current[name] = checkbox.checked;
-        saveShoppingChecked(current);
-        li.classList.toggle("is-checked", checkbox.checked);
-      });
-      li.appendChild(checkbox);
-
-      const textWrap = document.createElement("span");
-      textWrap.className = "shopping-text";
-
-      const nameLabel = document.createElement("span");
-      nameLabel.className = "shopping-name";
-      nameLabel.textContent = name;
-      textWrap.appendChild(nameLabel);
-
-      const detailLabel = document.createElement("span");
-      detailLabel.className = "shopping-detail";
-      detailLabel.textContent = items
+      const breakdown = items
         .map((item) => {
           const base = item.amount ? `${item.dayLabel} ${item.amount}` : item.dayLabel;
           return item.price ? `${base}（¥${item.price.toLocaleString()}）` : base;
         })
         .join(" ・ ");
-      textWrap.appendChild(detailLabel);
 
-      li.appendChild(textWrap);
-      shoppingList.appendChild(li);
+      const total = sumAmounts(items.map((item) => item.amount));
+      const detailText = total ? `合計 ${total} （${breakdown}）` : breakdown;
+
+      appendShoppingRow(name, detailText);
+    }
+  }
+
+  if (extraItems.length > 0) {
+    const headerLi = document.createElement("li");
+    headerLi.className = "shopping-category";
+    headerLi.textContent = "追加した物";
+    shoppingList.appendChild(headerLi);
+
+    for (const item of extraItems) {
+      appendShoppingRow(item.name, item.amount, {
+        deletable: true,
+        onDelete: () => {
+          const current = loadExtraShoppingItems(getPeriodKey()).filter((i) => i.id !== item.id);
+          saveExtraShoppingItems(getPeriodKey(), current);
+          renderShoppingList();
+        },
+      });
     }
   }
 
