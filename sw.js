@@ -1,6 +1,7 @@
 // Service Worker：オフラインでもアプリが開けるようにするための仕組み。
-// 一度開いたファイルをキャッシュ（スマホに保存）しておき、次回はそこから読み込む。
-const CACHE_NAME = "menu-app-v1";
+// 「まずネットから最新を取りに行き、取れなければキャッシュ（保存済み）を使う」方式にして、
+// 電波があるときは常に最新版が表示されるようにする。
+const CACHE_NAME = "menu-app-v2";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
@@ -12,6 +13,7 @@ const FILES_TO_CACHE = [
 ];
 
 self.addEventListener("install", (event) => {
+  self.skipWaiting(); // 新しいバージョンをすぐ有効にする
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(FILES_TO_CACHE))
   );
@@ -19,16 +21,25 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-      )
-    )
+    Promise.all([
+      caches.keys().then((keys) =>
+        Promise.all(
+          keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+        )
+      ),
+      self.clients.claim(), // 開いているページをすぐ新しいバージョンに切り替える
+    ])
   );
 });
 
 self.addEventListener("fetch", (event) => {
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    fetch(event.request)
+      .then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
