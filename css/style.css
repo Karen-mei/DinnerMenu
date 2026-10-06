@@ -543,6 +543,36 @@ main .card + .card {
   accent-color: #ff8a65;
 }
 
+.reorder-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.reorder-btn {
+  width: 28px;
+  height: 22px;
+  padding: 0;
+  font-size: 0.65rem;
+  line-height: 1;
+  border: 1px solid #ddd;
+  background: white;
+  color: #999;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.reorder-btn:active:not(:disabled) {
+  background: #fff0e8;
+  color: #ff7043;
+}
+
+.reorder-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
 .pantry-name {
   flex: 1;
   font-size: 0.95rem;

@@ -34,12 +34,46 @@ function saveFamilyMembers(members) {
   localStorage.setItem(FAMILY_STORAGE_KEY, JSON.stringify(members));
 }
 
+function moveMember(id, direction) {
+  const members = loadFamilyMembers();
+  const index = members.findIndex((m) => m.id === id);
+  const newIndex = index + direction;
+  if (index === -1 || newIndex < 0 || newIndex >= members.length) return;
+
+  [members[index], members[newIndex]] = [members[newIndex], members[index]];
+  saveFamilyMembers(members);
+  renderFamily();
+}
+
 function renderFamily() {
   const members = loadFamilyMembers();
   familyList.innerHTML = "";
 
-  for (const member of members) {
+  members.forEach((member, index) => {
     const li = document.createElement("li");
+
+    const reorderGroup = document.createElement("div");
+    reorderGroup.className = "reorder-group";
+
+    const upBtn = document.createElement("button");
+    upBtn.type = "button";
+    upBtn.className = "reorder-btn";
+    upBtn.textContent = "▲";
+    upBtn.setAttribute("aria-label", "上へ移動");
+    upBtn.disabled = index === 0;
+    upBtn.addEventListener("click", () => moveMember(member.id, -1));
+    reorderGroup.appendChild(upBtn);
+
+    const downBtn = document.createElement("button");
+    downBtn.type = "button";
+    downBtn.className = "reorder-btn";
+    downBtn.textContent = "▼";
+    downBtn.setAttribute("aria-label", "下へ移動");
+    downBtn.disabled = index === members.length - 1;
+    downBtn.addEventListener("click", () => moveMember(member.id, 1));
+    reorderGroup.appendChild(downBtn);
+
+    li.appendChild(reorderGroup);
 
     const nameLabel = document.createElement("span");
     nameLabel.className = "pantry-name";
@@ -60,7 +94,7 @@ function renderFamily() {
     li.appendChild(deleteBtn);
 
     familyList.appendChild(li);
-  }
+  });
 }
 
 familyForm.addEventListener("submit", (event) => {
