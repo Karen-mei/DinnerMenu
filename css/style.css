@@ -359,3 +359,37 @@ main .card + .card {
   color: #bbb;
   text-decoration: line-through;
 }
+
+.pantry-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pantry-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px;
+  border-bottom: 1px solid #f0e8e0;
+}
+
+.pantry-list li:last-child {
+  border-bottom: none;
+}
+
+.pantry-checkbox {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  accent-color: #ff8a65;
+}
+
+.pantry-name {
+  flex: 1;
+  font-size: 0.95rem;
+}
+
+.pantry-list li:not(.has-it) .pantry-name {
+  color: #d32f2f;
+}

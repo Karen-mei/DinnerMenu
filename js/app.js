@@ -64,6 +64,99 @@ form.addEventListener("submit", (event) => {
 
 render(loadWishes());
 
+// 「調味料マスタ」機能
+// 家にある調味料をチェックしておくと、買う食材リストから自動で除外される。
+// 使い切ったらチェックを外せば、また買う食材リストに出てくる。
+const PANTRY_STORAGE_KEY = "menuApp.pantryItems";
+const DEFAULT_PANTRY_ITEMS = [
+  "醤油", "みそ", "塩", "砂糖", "酢", "みりん", "料理酒",
+  "サラダ油", "ごま油", "こしょう", "だしの素", "片栗粉", "マヨネーズ", "ケチャップ",
+];
+
+const pantryForm = document.getElementById("pantry-form");
+const pantryInput = document.getElementById("pantry-input");
+const pantryList = document.getElementById("pantry-list");
+
+function loadPantry() {
+  const raw = localStorage.getItem(PANTRY_STORAGE_KEY);
+  if (!raw) {
+    // 初回だけ、よくある調味料をデフォルトで入れておく
+    const defaults = DEFAULT_PANTRY_ITEMS.map((name, i) => ({ id: i, name, hasIt: true }));
+    savePantry(defaults);
+    return defaults;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function savePantry(items) {
+  localStorage.setItem(PANTRY_STORAGE_KEY, JSON.stringify(items));
+}
+
+function renderPantry() {
+  const items = loadPantry();
+  pantryList.innerHTML = "";
+
+  for (const item of items) {
+    const li = document.createElement("li");
+    if (item.hasIt) li.classList.add("has-it");
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "pantry-checkbox";
+    checkbox.checked = item.hasIt;
+    checkbox.setAttribute("aria-label", `${item.name}が家にある`);
+    checkbox.addEventListener("change", () => {
+      const current = loadPantry();
+      const target = current.find((i) => i.id === item.id);
+      if (target) target.hasIt = checkbox.checked;
+      savePantry(current);
+      li.classList.toggle("has-it", checkbox.checked);
+      renderShoppingList();
+    });
+    li.appendChild(checkbox);
+
+    const nameLabel = document.createElement("span");
+    nameLabel.className = "pantry-name";
+    nameLabel.textContent = item.name;
+    li.appendChild(nameLabel);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "delete-btn";
+    deleteBtn.textContent = "×";
+    deleteBtn.setAttribute("aria-label", "削除");
+    deleteBtn.addEventListener("click", () => {
+      const current = loadPantry().filter((i) => i.id !== item.id);
+      savePantry(current);
+      renderPantry();
+      renderShoppingList();
+    });
+    li.appendChild(deleteBtn);
+
+    pantryList.appendChild(li);
+  }
+}
+
+pantryForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const name = pantryInput.value.trim();
+  if (!name) return;
+
+  const items = loadPantry();
+  items.push({ id: Date.now(), name, hasIt: true });
+  savePantry(items);
+  renderPantry();
+  renderShoppingList();
+
+  pantryInput.value = "";
+  pantryInput.focus();
+});
+
+renderPantry();
+
 // 「今週の予定」機能
 // 日付(YYYY-MM-DD)ごとに "with"（旦那いる）/ "without"（旦那いない）/ "none"（作らない）を保存する
 const WEEK_STORAGE_KEY = "menuApp.weekStatus";
@@ -435,6 +528,16 @@ function renderShoppingList() {
       if (!grouped.has(name)) grouped.set(name, []);
       grouped.get(name).push({ dayLabel, amount });
     }
+  }
+
+  // 調味料マスタで「家にある」になっているものは買う食材リストから除く
+  const pantryHaveSet = new Set(
+    loadPantry()
+      .filter((item) => item.hasIt)
+      .map((item) => item.name)
+  );
+  for (const name of pantryHaveSet) {
+    grouped.delete(name);
   }
 
   shoppingList.innerHTML = "";
