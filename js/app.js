@@ -193,12 +193,12 @@ function buildPrompt() {
 
 【条件】
 ・1歳の子どもも大人と同じ料理を取り分けて食べます。できるだけ薄味にしやすい、取り分けしやすい料理を中心に考えてください。
-・「作らない」の日は献立を考えず、dish を null、vegetables を空配列にしてください。
-・「旦那いる」の日は大人2人＋子ども1人分、「旦那いない」の日は大人1人＋子ども1人分として、使う野菜と分量を計算してください。
+・「作らない」の日は献立を考えず、dish を null、ingredients を空配列にしてください。
+・「旦那いる」の日は大人2人＋子ども1人分、「旦那いない」の日は大人1人＋子ども1人分として、使う食材と分量を計算してください。
 ・「旦那いない」の日は、品数が少なめの簡単な料理でも構いません。
 ・以下の「食べたいものメモ」の中から、1週間の中で自然に使えそうなものがあれば積極的に取り入れてください（すべて使う必要はありません）。
 ・同じ料理が1週間で重複しないようにしてください。
-・vegetables には、その日の料理に使う野菜だけを「野菜名 分量」の形式（例: "にんじん 1本"）で、1項目ずつ入れてください。
+・ingredients には、その日の料理に使う食材を全て「食材名 分量」の形式（例: "鶏もも肉 300g"）で、1項目ずつ入れてください。野菜だけでなく、肉・魚・調味料・加工品なども含めてください。
 
 【食べたいものメモ】
 ${wishText}
@@ -210,7 +210,7 @@ ${days}
 説明や前置きは一切不要です。次のJSON形式のみを出力してください。
 {
   "days": [
-    { "date": "YYYY-MM-DD", "dish": "料理名またはnull", "note": "一言メモ（10〜20文字程度、取り分けのコツなど）", "vegetables": ["野菜名 分量", "野菜名 分量"] }
+    { "date": "YYYY-MM-DD", "dish": "料理名またはnull", "note": "一言メモ（10〜20文字程度、取り分けのコツなど）", "ingredients": ["食材名 分量", "食材名 分量"] }
   ]
 }`;
 }
@@ -277,10 +277,11 @@ loadMenuBtn.addEventListener("click", () => {
   const menuMap = loadMenu();
   for (const day of parsed.days) {
     if (!day.date) continue;
+    const rawIngredients = day.ingredients || day.vegetables;
     menuMap[day.date] = {
       dish: day.dish || null,
       note: day.note || "",
-      vegetables: Array.isArray(day.vegetables) ? day.vegetables.filter(Boolean) : [],
+      ingredients: Array.isArray(rawIngredients) ? rawIngredients.filter(Boolean) : [],
     };
   }
   saveMenu(menuMap);
@@ -352,13 +353,13 @@ function startEditingDish(dateKey, date) {
 
   const vegLabel = document.createElement("span");
   vegLabel.className = "menu-veg-label";
-  vegLabel.textContent = "買う野菜（1行に1つ。例: にんじん 1本）";
+  vegLabel.textContent = "買う食材（1行に1つ。例: 鶏もも肉 300g）";
   li.appendChild(vegLabel);
 
   const vegInput = document.createElement("textarea");
   vegInput.className = "menu-veg-input";
   vegInput.rows = 2;
-  vegInput.value = (entry.vegetables || []).join("\n");
+  vegInput.value = (entry.ingredients || entry.vegetables || []).join("\n");
   li.appendChild(vegInput);
 
   // 既存のその日の表示を、この編集中の表示に差し替える
@@ -373,11 +374,11 @@ function startEditingDish(dateKey, date) {
     saved = true;
     const current = loadMenu();
     const newDish = input.value.trim();
-    const newVegetables = vegInput.value
+    const newIngredients = vegInput.value
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean);
-    current[dateKey] = { ...current[dateKey], dish: newDish || null, vegetables: newVegetables };
+    current[dateKey] = { ...current[dateKey], dish: newDish || null, ingredients: newIngredients };
     saveMenu(current);
     renderMenu();
   }
@@ -420,14 +421,15 @@ function saveShoppingChecked(checkedMap) {
 
 function renderShoppingList() {
   const menuMap = loadMenu();
-  const grouped = new Map(); // 野菜名 -> [{ dayLabel, amount }]
+  const grouped = new Map(); // 食材名 -> [{ dayLabel, amount }]
 
   for (const date of getThisWeekDates()) {
     const entry = menuMap[toDateKey(date)];
-    if (!entry || !entry.vegetables) continue;
+    const ingredients = entry && (entry.ingredients || entry.vegetables);
+    if (!ingredients) continue;
 
     const dayLabel = DAY_LABELS[(date.getDay() + 6) % 7];
-    for (const line of entry.vegetables) {
+    for (const line of ingredients) {
       const { name, amount } = parseVegLine(line);
       if (!name) continue;
       if (!grouped.has(name)) grouped.set(name, []);
