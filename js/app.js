@@ -302,7 +302,12 @@ function renderWeek() {
     const dateKey = toDateKey(date);
     const entry = statusMap[dateKey];
     const notCooking = Boolean(entry && entry.cooking === false);
-    const presentIds = entry && entry.cooking !== false ? entry.presentIds || [] : [];
+    // まだ何も選んでいない日は、家族全員が選択された状態を初期値にする
+    const presentIds = notCooking
+      ? []
+      : entry && entry.presentIds
+        ? entry.presentIds
+        : members.map((m) => m.id);
 
     const li = document.createElement("li");
     if (dateKey === todayKey) li.classList.add("is-today");
@@ -324,9 +329,14 @@ function renderWeek() {
       }
       btn.addEventListener("click", () => {
         const current = loadWeekStatus();
-        const currentEntry =
-          current[dateKey] && current[dateKey].cooking !== false ? current[dateKey] : { cooking: true, presentIds: [] };
-        const ids = new Set(currentEntry.presentIds || []);
+        const currentEntry = current[dateKey];
+        // 「作らない」の日や、まだ何も選んでいない日（＝全員選択済み扱い）を基準にする
+        const baselineIds = currentEntry
+          ? currentEntry.cooking === false
+            ? []
+            : currentEntry.presentIds || []
+          : members.map((m) => m.id);
+        const ids = new Set(baselineIds);
         if (ids.has(member.id)) ids.delete(member.id);
         else ids.add(member.id);
         current[dateKey] = { cooking: true, presentIds: [...ids] };
@@ -456,10 +466,11 @@ function buildPrompt() {
     .map((date) => {
       const dateKey = toDateKey(date);
       const entry = statusMap[dateKey];
-      if (!entry) return `${dateKey}: 未定`;
-      if (entry.cooking === false) return `${dateKey}: 作らない`;
+      if (entry && entry.cooking === false) return `${dateKey}: 作らない`;
 
-      const present = (entry.presentIds || []).map((id) => memberById.get(id)).filter(Boolean);
+      // まだ何も選んでいない日は、家族全員がいるものとして扱う
+      const presentIds = entry && entry.presentIds ? entry.presentIds : members.map((m) => m.id);
+      const present = presentIds.map((id) => memberById.get(id)).filter(Boolean);
       const adults = present.filter((m) => m.type === "adult").length;
       const children = present.filter((m) => m.type === "child").length;
       const names =
