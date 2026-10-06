@@ -59,20 +59,11 @@
   </section>
 
   <section class="card">
-    <h2>調味料マスタ</h2>
-    <p class="section-note">「家にある」にチェックが付いているものは、買う食材リストに出てきません。使い切ったらチェックを外してください。</p>
-    <form id="pantry-form" class="add-form">
-      <input type="text" id="pantry-input" placeholder="例：オイスターソース" autocomplete="off" required>
-      <button type="submit">追加</button>
-    </form>
-    <ul id="pantry-list" class="pantry-list"></ul>
-  </section>
-
-  <section class="card">
     <h2>買う食材リスト</h2>
-    <p class="section-note">献立から自動でまとめます。野菜・肉・調味料など全部の食材が対象です。人数が違う日の分量もAIが計算した内容がそのまま反映されます。調味料マスタで「家にある」ものは除外されます。</p>
+    <p class="section-note">献立から自動でまとめます。肉・魚 → 野菜 → その他 → 調味料の順に並びます。調味料マスタで「家にある」ものは除外されます。</p>
     <ul id="shopping-list" class="shopping-list"></ul>
     <p id="shopping-empty" class="empty-message">まだ食材の情報がありません。</p>
+    <a href="pantry.html" class="nav-link-btn">調味料マスタを編集する →</a>
   </section>
 </main>
 

@@ -64,25 +64,20 @@ form.addEventListener("submit", (event) => {
 
 render(loadWishes());
 
-// 「調味料マスタ」機能
+// 「調味料マスタ」のデータ読み書き（画面はpantry.htmlの方にある）
 // 家にある調味料をチェックしておくと、買う食材リストから自動で除外される。
-// 使い切ったらチェックを外せば、また買う食材リストに出てくる。
 const PANTRY_STORAGE_KEY = "menuApp.pantryItems";
 const DEFAULT_PANTRY_ITEMS = [
   "醤油", "みそ", "塩", "砂糖", "酢", "みりん", "料理酒",
   "サラダ油", "ごま油", "こしょう", "だしの素", "片栗粉", "マヨネーズ", "ケチャップ",
 ];
 
-const pantryForm = document.getElementById("pantry-form");
-const pantryInput = document.getElementById("pantry-input");
-const pantryList = document.getElementById("pantry-list");
-
 function loadPantry() {
   const raw = localStorage.getItem(PANTRY_STORAGE_KEY);
   if (!raw) {
     // 初回だけ、よくある調味料をデフォルトで入れておく
     const defaults = DEFAULT_PANTRY_ITEMS.map((name, i) => ({ id: i, name, hasIt: true }));
-    savePantry(defaults);
+    localStorage.setItem(PANTRY_STORAGE_KEY, JSON.stringify(defaults));
     return defaults;
   }
   try {
@@ -91,71 +86,6 @@ function loadPantry() {
     return [];
   }
 }
-
-function savePantry(items) {
-  localStorage.setItem(PANTRY_STORAGE_KEY, JSON.stringify(items));
-}
-
-function renderPantry() {
-  const items = loadPantry();
-  pantryList.innerHTML = "";
-
-  for (const item of items) {
-    const li = document.createElement("li");
-    if (item.hasIt) li.classList.add("has-it");
-
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.className = "pantry-checkbox";
-    checkbox.checked = item.hasIt;
-    checkbox.setAttribute("aria-label", `${item.name}が家にある`);
-    checkbox.addEventListener("change", () => {
-      const current = loadPantry();
-      const target = current.find((i) => i.id === item.id);
-      if (target) target.hasIt = checkbox.checked;
-      savePantry(current);
-      li.classList.toggle("has-it", checkbox.checked);
-      renderShoppingList();
-    });
-    li.appendChild(checkbox);
-
-    const nameLabel = document.createElement("span");
-    nameLabel.className = "pantry-name";
-    nameLabel.textContent = item.name;
-    li.appendChild(nameLabel);
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.className = "delete-btn";
-    deleteBtn.textContent = "×";
-    deleteBtn.setAttribute("aria-label", "削除");
-    deleteBtn.addEventListener("click", () => {
-      const current = loadPantry().filter((i) => i.id !== item.id);
-      savePantry(current);
-      renderPantry();
-      renderShoppingList();
-    });
-    li.appendChild(deleteBtn);
-
-    pantryList.appendChild(li);
-  }
-}
-
-pantryForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const name = pantryInput.value.trim();
-  if (!name) return;
-
-  const items = loadPantry();
-  items.push({ id: Date.now(), name, hasIt: true });
-  savePantry(items);
-  renderPantry();
-  renderShoppingList();
-
-  pantryInput.value = "";
-  pantryInput.focus();
-});
-
-renderPantry();
 
 // 「今週の予定」機能
 // 日付(YYYY-MM-DD)ごとに "with"（旦那いる）/ "without"（旦那いない）/ "none"（作らない）を保存する
@@ -289,9 +219,10 @@ function buildPrompt() {
 ・「作らない」の日は献立を考えず、dish を null、ingredients を空配列にしてください。
 ・「旦那いる」の日は大人2人＋子ども1人分、「旦那いない」の日は大人1人＋子ども1人分として、使う食材と分量を計算してください。
 ・「旦那いない」の日は、品数が少なめの簡単な料理でも構いません。
+・できるだけ無添加・手作りの味付けにしたいので、カレールーやシチューのルー、めんつゆの素などの市販の合わせ調味料はなるべく使わず、しょうゆ・みそ・砂糖などを組み合わせて一から味付けする料理を優先してください。
 ・以下の「食べたいものメモ」の中から、1週間の中で自然に使えそうなものがあれば積極的に取り入れてください（すべて使う必要はありません）。
 ・同じ料理が1週間で重複しないようにしてください。
-・ingredients には、その日の料理に使う食材を全て「食材名 分量」の形式（例: "鶏もも肉 300g"）で、1項目ずつ入れてください。野菜だけでなく、肉・魚・調味料・加工品なども含めてください。
+・ingredients には、その日の料理に使う食材を全て入れてください。野菜だけでなく、肉・魚・調味料・加工品なども含めてください。各食材には name（食材名）、amount（分量、例: "300g"）、category（"肉・魚" "野菜" "調味料" "その他" のいずれか）を付けてください。
 
 【食べたいものメモ】
 ${wishText}
@@ -303,7 +234,14 @@ ${days}
 説明や前置きは一切不要です。次のJSON形式のみを出力してください。
 {
   "days": [
-    { "date": "YYYY-MM-DD", "dish": "料理名またはnull", "note": "一言メモ（10〜20文字程度、取り分けのコツなど）", "ingredients": ["食材名 分量", "食材名 分量"] }
+    {
+      "date": "YYYY-MM-DD",
+      "dish": "料理名またはnull",
+      "note": "一言メモ（10〜20文字程度、取り分けのコツなど）",
+      "ingredients": [
+        { "name": "食材名", "amount": "分量", "category": "肉・魚" }
+      ]
+    }
   ]
 }`;
 }
@@ -374,7 +312,9 @@ loadMenuBtn.addEventListener("click", () => {
     menuMap[day.date] = {
       dish: day.dish || null,
       note: day.note || "",
-      ingredients: Array.isArray(rawIngredients) ? rawIngredients.filter(Boolean) : [],
+      ingredients: Array.isArray(rawIngredients)
+        ? rawIngredients.filter(Boolean).map(normalizeIngredient)
+        : [],
     };
   }
   saveMenu(menuMap);
@@ -452,7 +392,12 @@ function startEditingDish(dateKey, date) {
   const vegInput = document.createElement("textarea");
   vegInput.className = "menu-veg-input";
   vegInput.rows = 2;
-  vegInput.value = (entry.ingredients || entry.vegetables || []).join("\n");
+  vegInput.value = (entry.ingredients || entry.vegetables || [])
+    .map((item) => {
+      const { name, amount } = normalizeIngredient(item);
+      return amount ? `${name} ${amount}` : name;
+    })
+    .join("\n");
   li.appendChild(vegInput);
 
   // 既存のその日の表示を、この編集中の表示に差し替える
@@ -470,7 +415,8 @@ function startEditingDish(dateKey, date) {
     const newIngredients = vegInput.value
       .split("\n")
       .map((line) => line.trim())
-      .filter(Boolean);
+      .filter(Boolean)
+      .map(normalizeIngredient);
     current[dateKey] = { ...current[dateKey], dish: newDish || null, ingredients: newIngredients };
     saveMenu(current);
     renderMenu();
@@ -490,10 +436,20 @@ function startEditingDish(dateKey, date) {
   input.select();
 }
 
-function parseVegLine(line) {
-  const match = line.match(/^(\S+)\s*(.*)$/);
-  if (!match) return { name: line, amount: "" };
-  return { name: match[1], amount: match[2].trim() };
+// 肉や魚 → 野菜 → その他 → 調味料 の順で買う食材リストに並べる
+const CATEGORY_ORDER = ["肉・魚", "野菜", "その他", "調味料"];
+
+function normalizeIngredient(item) {
+  if (typeof item === "string") {
+    const match = item.match(/^(\S+)\s*(.*)$/);
+    const name = match ? match[1] : item;
+    const amount = match ? match[2].trim() : "";
+    return { name, amount, category: "その他" };
+  }
+  const name = (item && item.name) || "";
+  const amount = (item && item.amount) || "";
+  const category = CATEGORY_ORDER.includes(item && item.category) ? item.category : "その他";
+  return { name, amount, category };
 }
 
 const SHOPPING_CHECKED_KEY = "menuApp.shoppingChecked";
@@ -514,7 +470,7 @@ function saveShoppingChecked(checkedMap) {
 
 function renderShoppingList() {
   const menuMap = loadMenu();
-  const grouped = new Map(); // 食材名 -> [{ dayLabel, amount }]
+  const grouped = new Map(); // 食材名 -> { category, items: [{ dayLabel, amount }] }
 
   for (const date of getThisWeekDates()) {
     const entry = menuMap[toDateKey(date)];
@@ -522,11 +478,11 @@ function renderShoppingList() {
     if (!ingredients) continue;
 
     const dayLabel = DAY_LABELS[(date.getDay() + 6) % 7];
-    for (const line of ingredients) {
-      const { name, amount } = parseVegLine(line);
+    for (const raw of ingredients) {
+      const { name, amount, category } = normalizeIngredient(raw);
       if (!name) continue;
-      if (!grouped.has(name)) grouped.set(name, []);
-      grouped.get(name).push({ dayLabel, amount });
+      if (!grouped.has(name)) grouped.set(name, { category, items: [] });
+      grouped.get(name).items.push({ dayLabel, amount });
     }
   }
 
@@ -545,41 +501,51 @@ function renderShoppingList() {
 
   const checkedMap = loadShoppingChecked();
 
-  for (const [name, items] of grouped) {
-    const li = document.createElement("li");
-    li.className = "shopping-item";
-    if (checkedMap[name]) li.classList.add("is-checked");
+  for (const category of CATEGORY_ORDER) {
+    const entries = [...grouped].filter(([, value]) => value.category === category);
+    if (entries.length === 0) continue;
 
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.className = "shopping-checkbox";
-    checkbox.checked = Boolean(checkedMap[name]);
-    checkbox.setAttribute("aria-label", `${name}を買った`);
-    checkbox.addEventListener("change", () => {
-      const current = loadShoppingChecked();
-      current[name] = checkbox.checked;
-      saveShoppingChecked(current);
-      li.classList.toggle("is-checked", checkbox.checked);
-    });
-    li.appendChild(checkbox);
+    const headerLi = document.createElement("li");
+    headerLi.className = "shopping-category";
+    headerLi.textContent = category;
+    shoppingList.appendChild(headerLi);
 
-    const textWrap = document.createElement("span");
-    textWrap.className = "shopping-text";
+    for (const [name, { items }] of entries) {
+      const li = document.createElement("li");
+      li.className = "shopping-item";
+      if (checkedMap[name]) li.classList.add("is-checked");
 
-    const nameLabel = document.createElement("span");
-    nameLabel.className = "shopping-name";
-    nameLabel.textContent = name;
-    textWrap.appendChild(nameLabel);
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.className = "shopping-checkbox";
+      checkbox.checked = Boolean(checkedMap[name]);
+      checkbox.setAttribute("aria-label", `${name}を買った`);
+      checkbox.addEventListener("change", () => {
+        const current = loadShoppingChecked();
+        current[name] = checkbox.checked;
+        saveShoppingChecked(current);
+        li.classList.toggle("is-checked", checkbox.checked);
+      });
+      li.appendChild(checkbox);
 
-    const detailLabel = document.createElement("span");
-    detailLabel.className = "shopping-detail";
-    detailLabel.textContent = items
-      .map((item) => (item.amount ? `${item.dayLabel} ${item.amount}` : item.dayLabel))
-      .join(" ・ ");
-    textWrap.appendChild(detailLabel);
+      const textWrap = document.createElement("span");
+      textWrap.className = "shopping-text";
 
-    li.appendChild(textWrap);
-    shoppingList.appendChild(li);
+      const nameLabel = document.createElement("span");
+      nameLabel.className = "shopping-name";
+      nameLabel.textContent = name;
+      textWrap.appendChild(nameLabel);
+
+      const detailLabel = document.createElement("span");
+      detailLabel.className = "shopping-detail";
+      detailLabel.textContent = items
+        .map((item) => (item.amount ? `${item.dayLabel} ${item.amount}` : item.dayLabel))
+        .join(" ・ ");
+      textWrap.appendChild(detailLabel);
+
+      li.appendChild(textWrap);
+      shoppingList.appendChild(li);
+    }
   }
 }
 

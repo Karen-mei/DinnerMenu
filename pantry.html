@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>調味料マスタ - 献立アプリ</title>
+<meta name="theme-color" content="#ff8a65">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="app-header">
+  <a href="index.html" class="back-link">← 戻る</a>
+  <h1>調味料マスタ</h1>
+</header>
+
+<main>
+  <section class="card">
+    <p class="section-note">「家にある」にチェックが付いているものは、買う食材リストに出てきません。使い切ったらチェックを外してください。</p>
+    <form id="pantry-form" class="add-form">
+      <input type="text" id="pantry-input" placeholder="例：オイスターソース" autocomplete="off" required>
+      <button type="submit">追加</button>
+    </form>
+    <ul id="pantry-list" class="pantry-list"></ul>
+  </section>
+</main>
+
+<script src="js/pantry.js"></script>
+</body>
+</html>
