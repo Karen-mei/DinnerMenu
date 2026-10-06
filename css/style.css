@@ -524,3 +524,45 @@ main .card + .card {
 .pantry-list li.is-expired .pantry-name {
   color: #bbb;
 }
+
+.saved-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.saved-menu-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px;
+  border-bottom: 1px solid #f0e8e0;
+}
+
+.saved-menu-list li:last-child {
+  border-bottom: none;
+}
+
+.saved-menu-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 4px 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.saved-menu-label {
+  font-size: 1rem;
+  color: #333;
+}
+
+.saved-menu-range {
+  font-size: 0.8rem;
+  color: #999;
+}

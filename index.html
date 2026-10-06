@@ -90,6 +90,17 @@
     <p class="ai-step-title side-dish-title">副菜の提案</p>
     <ul id="side-dish-list" class="menu-list"></ul>
     <p id="side-dish-empty" class="empty-message">まだありません。</p>
+
+    <div class="ai-step">
+      <p class="ai-step-title">この期間の献立を保存</p>
+      <form id="save-menu-form" class="stock-form-row">
+        <input type="text" id="save-menu-label-input" placeholder="名前（任意、例：10月第1週）" autocomplete="off">
+        <button type="submit">保存</button>
+      </form>
+      <p id="save-menu-status" class="copy-status" aria-live="polite"></p>
+    </div>
+
+    <a href="menus.html" class="nav-link-btn">保存した献立リストを見る →</a>
   </section>
 
   <section class="card">

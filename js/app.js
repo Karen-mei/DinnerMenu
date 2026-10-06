@@ -584,6 +584,47 @@ function renderSideDishes() {
 
 renderSideDishes();
 
+// 「献立リスト」への保存（期間に名前を付けてブックマークしておく機能。画面は menus.html）
+const SAVED_MENUS_KEY = "menuApp.savedMenus";
+const saveMenuForm = document.getElementById("save-menu-form");
+const saveMenuLabelInput = document.getElementById("save-menu-label-input");
+const saveMenuStatus = document.getElementById("save-menu-status");
+
+function loadSavedMenus() {
+  const raw = localStorage.getItem(SAVED_MENUS_KEY);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function saveSavedMenus(list) {
+  localStorage.setItem(SAVED_MENUS_KEY, JSON.stringify(list));
+}
+
+saveMenuForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const start = loadPeriodStart();
+  const end = loadPeriodEnd();
+  const label = saveMenuLabelInput.value.trim() || `${start} 〜 ${end}`;
+
+  const list = loadSavedMenus();
+  list.unshift({
+    id: Date.now(),
+    periodStart: start,
+    periodEnd: end,
+    label,
+    savedAt: new Date().toISOString(),
+  });
+  saveSavedMenus(list);
+
+  saveMenuLabelInput.value = "";
+  saveMenuStatus.textContent = "保存しました。「保存した献立リストを見る」から確認できます。";
+  saveMenuStatus.classList.remove("is-error");
+});
+
 function loadMenu() {
   const raw = localStorage.getItem(MENU_STORAGE_KEY);
   if (!raw) return {};
