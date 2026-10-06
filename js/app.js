@@ -283,6 +283,10 @@ loadMenuBtn.addEventListener("click", () => {
   aiResponseInput.value = "";
 });
 
+function formatDateLabel(date) {
+  return `${date.getMonth() + 1}/${date.getDate()}（${DAY_LABELS[(date.getDay() + 6) % 7]}）`;
+}
+
 function renderMenu() {
   const menuMap = loadMenu();
   menuList.innerHTML = "";
@@ -293,17 +297,19 @@ function renderMenu() {
     if (!entry) continue;
 
     const li = document.createElement("li");
+    li.dataset.dateKey = dateKey;
 
     const dateLabel = document.createElement("span");
     dateLabel.className = "menu-date";
-    dateLabel.textContent = `${date.getMonth() + 1}/${date.getDate()}（${DAY_LABELS[(date.getDay() + 6) % 7]}）`;
-
-    const dishLabel = document.createElement("span");
-    dishLabel.className = "menu-dish";
-    dishLabel.textContent = entry.dish || "（作らない日）";
-
+    dateLabel.textContent = formatDateLabel(date);
     li.appendChild(dateLabel);
-    li.appendChild(dishLabel);
+
+    const dishBtn = document.createElement("button");
+    dishBtn.type = "button";
+    dishBtn.className = "menu-dish-btn";
+    dishBtn.textContent = entry.dish || "（作らない日・タップで入力）";
+    dishBtn.addEventListener("click", () => startEditingDish(dateKey, date));
+    li.appendChild(dishBtn);
 
     if (entry.note) {
       const noteLabel = document.createElement("span");
@@ -314,6 +320,50 @@ function renderMenu() {
 
     menuList.appendChild(li);
   }
+}
+
+function startEditingDish(dateKey, date) {
+  const menuMap = loadMenu();
+  const entry = menuMap[dateKey] || {};
+
+  const li = document.createElement("li");
+
+  const dateLabel = document.createElement("span");
+  dateLabel.className = "menu-date";
+  dateLabel.textContent = formatDateLabel(date);
+  li.appendChild(dateLabel);
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "menu-dish-input";
+  input.value = entry.dish || "";
+  input.placeholder = "料理名を入力（空にすると「作らない」になります）";
+  li.appendChild(input);
+
+  // 既存のその日の表示を、この編集中の表示に差し替える
+  const existingLi = [...menuList.children].find((child) => child.dataset.dateKey === dateKey);
+  if (existingLi) {
+    menuList.replaceChild(li, existingLi);
+  }
+
+  let saved = false;
+  function commit() {
+    if (saved) return;
+    saved = true;
+    const current = loadMenu();
+    const newDish = input.value.trim();
+    current[dateKey] = { ...current[dateKey], dish: newDish || null };
+    saveMenu(current);
+    renderMenu();
+  }
+
+  input.addEventListener("blur", commit);
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") input.blur();
+  });
+
+  input.focus();
+  input.select();
 }
 
 renderMenu();
