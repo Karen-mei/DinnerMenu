@@ -485,24 +485,24 @@ function buildPrompt() {
       ? stockItems.map((i) => `・${i.name}${i.amount ? `（${i.amount}）` : ""}`).join("\n")
       : "（特になし）";
 
-  const dislikedItems = loadActiveDislikedIngredients();
-  const dislikedText =
-    dislikedItems.length > 0 ? dislikedItems.map((i) => `・${i.text}`).join("\n") : "（特になし）";
-
   const members = loadFamilyMembers();
   const memberById = new Map(members.map((m) => [m.id, m]));
+
+  function formatTargetMembers(memberIds) {
+    const names = (memberIds || []).map((id) => memberById.get(id)).filter(Boolean).map((m) => m.name);
+    return names.length > 0 ? names.join("・") : "家族全員";
+  }
+
+  const dislikedItems = loadActiveDislikedIngredients();
+  const dislikedText =
+    dislikedItems.length > 0
+      ? dislikedItems.map((i) => `・${i.text}（対象：${formatTargetMembers(i.memberIds)}）`).join("\n")
+      : "（特になし）";
+
   const allergyItems = loadAllergies();
   const allergyText =
     allergyItems.length > 0
-      ? allergyItems
-          .map((i) => {
-            const names = (i.memberIds || [])
-              .map((id) => memberById.get(id))
-              .filter(Boolean)
-              .map((m) => m.name);
-            return `・${i.text}（対象：${names.length > 0 ? names.join("・") : "家族全員"}）`;
-          })
-          .join("\n")
+      ? allergyItems.map((i) => `・${i.text}（対象：${formatTargetMembers(i.memberIds)}）`).join("\n")
       : "（登録なし）";
 
   const statusMap = loadWeekStatus();

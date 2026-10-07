@@ -37,6 +37,8 @@
     <p class="section-note">アレルギー（安全上、絶対に避けるべきもの）とは別に、味の好み・体調面などで避けたいものはこちらに。ここに登録したものは、AIへの質問文で「使わないでください」として毎回伝えます。「いつまで」を入れておくと、その日を過ぎたら自動的に対象から外れます（妊娠中だけNG、などの一時的なものに）。空欄ならずっと有効です。</p>
     <form id="dislike-form" class="stock-form">
       <input type="text" id="dislike-name-input" placeholder="品名（例：レバー）" autocomplete="off" required>
+      <p class="ai-step-title">対象の家族（未選択なら家族全員が対象）</p>
+      <div id="dislike-member-group" class="status-group"></div>
       <div class="stock-form-row">
         <input type="date" id="dislike-until-input" aria-label="いつまで（任意）">
         <button type="submit">追加</button>
