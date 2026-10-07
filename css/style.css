@@ -11,7 +11,7 @@ body {
 }
 
 .app-header {
-  background: #ff8a65;
+  background: #c2410c;
   color: white;
   padding: 16px env(safe-area-inset-right) 16px calc(16px + env(safe-area-inset-left));
   padding-top: calc(16px + env(safe-area-inset-top));
@@ -115,7 +115,7 @@ body {
   margin-top: 16px;
   padding: 10px;
   font-size: 0.9rem;
-  color: #ff7043;
+  color: #c2410c;
   text-decoration: none;
   border: 1px solid #ffccbc;
   border-radius: 8px;
@@ -130,6 +130,17 @@ button.nav-link-btn {
   background: white;
   font-family: inherit;
   cursor: pointer;
+}
+
+.import-backup-label {
+  width: 100%;
+  background: white;
+  cursor: pointer;
+}
+
+.import-warning {
+  margin-top: 8px;
+  color: #c2410c;
 }
 
 .share-btn {
@@ -171,7 +182,7 @@ main {
 .add-form button {
   padding: 10px 16px;
   font-size: 1rem;
-  background: #ff8a65;
+  background: #c2410c;
   color: white;
   border: none;
   border-radius: 8px;
@@ -179,7 +190,7 @@ main {
 }
 
 .add-form button:active {
-  background: #ff7043;
+  background: #9a3409;
 }
 
 .wish-list {
@@ -237,6 +248,11 @@ main .card + .card {
   color: #888;
 }
 
+.allergy-warning {
+  color: #c2410c;
+  font-weight: bold;
+}
+
 .period-controls {
   display: flex;
   align-items: center;
@@ -269,7 +285,7 @@ main .card + .card {
   padding: 8px 10px;
   font-size: 0.85rem;
   background: white;
-  color: #ff7043;
+  color: #c2410c;
   border: 1px solid #ffccbc;
   border-radius: 8px;
   cursor: pointer;
@@ -310,7 +326,7 @@ main .card + .card {
   width: 100%;
   padding: 10px 16px;
   font-size: 1rem;
-  background: #ff8a65;
+  background: #c2410c;
   color: white;
   border: none;
   border-radius: 8px;
@@ -318,7 +334,7 @@ main .card + .card {
 }
 
 .stock-form > button:active {
-  background: #ff7043;
+  background: #9a3409;
 }
 
 .stock-form-row {
@@ -343,7 +359,7 @@ main .card + .card {
 .stock-form-row button {
   padding: 10px 16px;
   font-size: 1rem;
-  background: #ff8a65;
+  background: #c2410c;
   color: white;
   border: none;
   border-radius: 8px;
@@ -352,14 +368,14 @@ main .card + .card {
 }
 
 .stock-form-row button:active {
-  background: #ff7043;
+  background: #9a3409;
 }
 
 .budget-estimate {
   margin: 0 0 12px;
   font-size: 1rem;
   font-weight: bold;
-  color: #ff7043;
+  color: #c2410c;
 }
 
 .week-list {
@@ -378,7 +394,7 @@ main .card + .card {
 }
 
 .week-list li.is-today .day-label {
-  color: #ff7043;
+  color: #c2410c;
 }
 
 .day-label {
@@ -408,8 +424,8 @@ main .card + .card {
 }
 
 .member-btn.is-selected {
-  background: #ff8a65;
-  border-color: #ff8a65;
+  background: #c2410c;
+  border-color: #c2410c;
   color: white;
 }
 
@@ -433,7 +449,7 @@ main .card + .card {
 .ai-step button {
   padding: 10px 16px;
   font-size: 0.95rem;
-  background: #ff8a65;
+  background: #c2410c;
   color: white;
   border: none;
   border-radius: 8px;
@@ -441,7 +457,7 @@ main .card + .card {
 }
 
 .ai-step button:active {
-  background: #ff7043;
+  background: #9a3409;
 }
 
 .ai-textarea {
@@ -487,7 +503,7 @@ main .card + .card {
   display: block;
   font-size: 0.85rem;
   font-weight: bold;
-  color: #ff7043;
+  color: #c2410c;
   margin-bottom: 2px;
 }
 
@@ -517,7 +533,7 @@ main .card + .card {
   font-size: 1rem;
   padding: 6px;
   margin: 0 0 2px -6px;
-  border: 1px solid #ff8a65;
+  border: 1px solid #c2410c;
   border-radius: 6px;
   font-family: inherit;
 }
@@ -556,7 +572,7 @@ main .card + .card {
 .shopping-category {
   font-size: 0.8rem;
   font-weight: bold;
-  color: #ff7043;
+  color: #c2410c;
   padding: 14px 0 4px;
   border-bottom: none;
 }
@@ -582,7 +598,7 @@ main .card + .card {
   height: 22px;
   margin-top: 2px;
   flex-shrink: 0;
-  accent-color: #ff8a65;
+  accent-color: #c2410c;
 }
 
 .shopping-text {
@@ -629,7 +645,7 @@ main .card + .card {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
-  accent-color: #ff8a65;
+  accent-color: #c2410c;
 }
 
 .reorder-group {
@@ -654,7 +670,7 @@ main .card + .card {
 
 .reorder-btn:active:not(:disabled) {
   background: #fff0e8;
-  color: #ff7043;
+  color: #c2410c;
 }
 
 .reorder-btn:disabled {

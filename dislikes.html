@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>苦手な食材 - 献立アプリ</title>
-<meta name="theme-color" content="#ff8a65">
+<meta name="theme-color" content="#c2410c">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,12 +14,27 @@
 <body>
 <header class="app-header">
   <a href="index.html" class="back-link">← 戻る</a>
-  <h1>苦手な食材</h1>
+  <h1>苦手な食材・アレルギー</h1>
 </header>
 
 <main>
   <section class="card">
-    <p class="section-note">ここに登録したものは、AIへの質問文で「使わないでください」として毎回伝えます。「いつまで」を入れておくと、その日を過ぎたら自動的に対象から外れます（妊娠中だけNG、などの一時的なものに）。空欄ならずっと有効です。</p>
+    <h2>アレルギー</h2>
+    <p class="section-note allergy-warning">⚠️ 安全のための注意：ここに登録した内容はAIへの質問文で「絶対に使わないでください」と強く伝えますが、AIが見落とす可能性はゼロではありません。出来上がった献立を使う前に、必ずご自身の目でアレルギー食材が入っていないか確認してください。</p>
+    <form id="allergy-form" class="stock-form">
+      <input type="text" id="allergy-name-input" placeholder="品名（例：卵）" autocomplete="off" required>
+      <p class="ai-step-title">対象の家族（未選択なら家族全員が対象）</p>
+      <div id="allergy-member-group" class="status-group"></div>
+      <button type="submit">追加</button>
+    </form>
+    <ul id="allergy-list" class="pantry-list"></ul>
+    <p id="allergy-empty-message" class="empty-message">まだ登録されていません。</p>
+    <a href="family.html" class="nav-link-btn">家族構成を編集する →</a>
+  </section>
+
+  <section class="card">
+    <h2>苦手な食材</h2>
+    <p class="section-note">アレルギー（安全上、絶対に避けるべきもの）とは別に、味の好み・体調面などで避けたいものはこちらに。ここに登録したものは、AIへの質問文で「使わないでください」として毎回伝えます。「いつまで」を入れておくと、その日を過ぎたら自動的に対象から外れます（妊娠中だけNG、などの一時的なものに）。空欄ならずっと有効です。</p>
     <form id="dislike-form" class="stock-form">
       <input type="text" id="dislike-name-input" placeholder="品名（例：レバー）" autocomplete="off" required>
       <div class="stock-form-row">

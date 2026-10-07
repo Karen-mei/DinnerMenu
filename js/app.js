@@ -441,6 +441,21 @@ periodEndInput.addEventListener("change", () => {
 
 refreshPeriodInput();
 
+// 「アレルギー」のデータ読み込み（画面はdislikes.htmlの方にある）
+// 苦手な食材とは別枠で管理し、AIへの質問文では「絶対に使わないでください」という
+// 強い言い方で伝える。安全に関わるため、誰が対象かも書いて伝える。
+const ALLERGY_STORAGE_KEY = "menuApp.allergies";
+
+function loadAllergies() {
+  const raw = localStorage.getItem(ALLERGY_STORAGE_KEY);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
 // 「AIに献立を考えてもらう」機能
 // 裏方サーバーは使わず、質問文をコピーしてClaudeアプリに貼り付けてもらい、
 // 返ってきた答えを貼り付けてもらう方式（無料で使える）。
@@ -474,9 +489,23 @@ function buildPrompt() {
   const dislikedText =
     dislikedItems.length > 0 ? dislikedItems.map((i) => `・${i.text}`).join("\n") : "（特になし）";
 
-  const statusMap = loadWeekStatus();
   const members = loadFamilyMembers();
   const memberById = new Map(members.map((m) => [m.id, m]));
+  const allergyItems = loadAllergies();
+  const allergyText =
+    allergyItems.length > 0
+      ? allergyItems
+          .map((i) => {
+            const names = (i.memberIds || [])
+              .map((id) => memberById.get(id))
+              .filter(Boolean)
+              .map((m) => m.name);
+            return `・${i.text}（対象：${names.length > 0 ? names.join("・") : "家族全員"}）`;
+          })
+          .join("\n")
+      : "（登録なし）";
+
+  const statusMap = loadWeekStatus();
   const days = getPeriodDates()
     .map((date) => {
       const dateKey = toDateKey(date);
@@ -514,6 +543,7 @@ function buildPrompt() {
 ・1歳の子どもも大人と同じ料理を取り分けて食べます。できるだけ薄味にしやすい、取り分けしやすい料理を中心に考えてください。
 ・子どもの鉄分摂取も意識して、赤身の肉やほうれん草、ひじき、あさりなど鉄分が多い食材を週に数回は取り入れてください。
 ・以下の「苦手な食材」は使わないでください。
+・以下の「アレルギー」に書かれている食材は、安全上の理由で絶対に使わないでください。少量の使用や、原材料として紛れ込む可能性（例：卵アレルギーならマヨネーズや練り物にも注意）にも配慮してください。同じ料理を取り分けて食べる家族構成なので、対象の家族が食べる日は、その料理自体にアレルギー食材を使わないでください。
 ・「好みと傾向」が書かれている場合は、それも踏まえて味付けや献立の方向性を考えてください。
 ・「作らない」の日、または人数が0人や未選択の日は献立を考えず、dish を null、ingredients を空配列にしてください。
 ・各日に書かれている人数（大人◯人・子ども◯人）に合わせて、使う食材と分量を計算してください。人数が少ない日は、品数が少なめの簡単な料理でも構いません。
@@ -529,6 +559,9 @@ ${extraInstructionBlock}${preferenceBlock}
 【苦手な食材（使わないでください）】
 ${dislikedText}
 
+【アレルギー（安全のため絶対に使わないでください）】
+${allergyText}
+
 【食べたいものメモ】
 ${wishText}
 
@@ -539,7 +572,7 @@ ${stockText}
 ${days}
 
 【出力形式】
-説明や前置きは一切不要です。次のJSON形式のみを出力してください。
+説明や前置きは一切不要です。次のJSON形式のみを出力してください（\`\`\`で囲んでも囲まなくても構いません）。
 {
   "days": [
     {
@@ -733,14 +766,33 @@ function saveMenu(menuMap) {
   localStorage.setItem(MENU_STORAGE_KEY, JSON.stringify(menuMap));
 }
 
+// AIの返事はコードブロック（```）で囲まれていたり、前置きの文章が付いていたりと
+// 形式がバラつきやすい。何パターンか試して、読み取れたものを使う。
 function extractJson(text) {
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) return null;
-  try {
-    return JSON.parse(match[0]);
-  } catch {
-    return null;
+  const trimmed = text.trim();
+  const candidates = [];
+
+  const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenceMatch) candidates.push(fenceMatch[1]);
+
+  candidates.push(trimmed);
+
+  const braceMatch = trimmed.match(/\{[\s\S]*\}/);
+  if (braceMatch) candidates.push(braceMatch[0]);
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      // AIがたまに付けてしまう末尾の余分なカンマを取り除いて、もう一度だけ試す
+      try {
+        return JSON.parse(candidate.replace(/,\s*([}\]])/g, "$1"));
+      } catch {
+        continue;
+      }
+    }
   }
+  return null;
 }
 
 loadMenuBtn.addEventListener("click", () => {
@@ -752,8 +804,13 @@ loadMenuBtn.addEventListener("click", () => {
   }
 
   const parsed = extractJson(text);
-  if (!parsed || !Array.isArray(parsed.days)) {
-    loadStatus.textContent = "読み取れませんでした。AIの返事をそのまま（JSON部分を含めて）貼り付けてください。";
+  if (!parsed) {
+    loadStatus.textContent = "読み取れませんでした。AIの返事の中にJSON（{ … }の形式のデータ）が見つかりません。Claudeの返事を、説明文も含めてそのまま全部貼り付けてみてください。";
+    loadStatus.classList.add("is-error");
+    return;
+  }
+  if (!Array.isArray(parsed.days)) {
+    loadStatus.textContent = "JSONとしては読み取れましたが、「days」のデータが見つかりませんでした。質問文の形式が守られていない可能性があるので、Claudeにもう一度、指定した形式で出し直してもらってください。";
     loadStatus.classList.add("is-error");
     return;
   }
@@ -1234,6 +1291,70 @@ shareShoppingBtn.addEventListener("click", async () => {
 });
 
 renderMenu();
+
+// 「データのバックアップ」機能
+// このアプリのデータ（menuApp. で始まるキー全部）をひとつのファイルに書き出し、
+// 別の端末でそのファイルを取り込むと同じデータが復元できる（端末変更・夫婦間の共有用）。
+const exportBackupBtn = document.getElementById("export-backup-btn");
+const exportBackupStatus = document.getElementById("export-backup-status");
+const importBackupInput = document.getElementById("import-backup-input");
+const importBackupStatus = document.getElementById("import-backup-status");
+
+function collectBackupData() {
+  const data = {};
+  for (const key of Object.keys(localStorage)) {
+    if (key.startsWith("menuApp.")) {
+      data[key] = localStorage.getItem(key);
+    }
+  }
+  return data;
+}
+
+exportBackupBtn.addEventListener("click", () => {
+  const json = JSON.stringify(collectBackupData(), null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `献立アプリ_バックアップ_${toDateKey(new Date())}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+
+  exportBackupStatus.textContent = "書き出しました。このファイルを保存しておいてください。";
+  exportBackupStatus.classList.remove("is-error");
+});
+
+importBackupInput.addEventListener("change", async () => {
+  const file = importBackupInput.files[0];
+  if (!file) return;
+
+  try {
+    const data = JSON.parse(await file.text());
+    const keys = Object.keys(data).filter((key) => key.startsWith("menuApp."));
+    if (keys.length === 0) throw new Error("menuAppのデータが見つからない");
+
+    const ok = window.confirm("取り込むと、今この端末に入っているデータは上書きされます。よろしいですか？");
+    if (!ok) {
+      importBackupInput.value = "";
+      return;
+    }
+
+    for (const key of keys) {
+      localStorage.setItem(key, data[key]);
+    }
+
+    importBackupStatus.textContent = "取り込みました。画面を読み込み直します。";
+    importBackupStatus.classList.remove("is-error");
+    setTimeout(() => location.reload(), 800);
+  } catch {
+    importBackupStatus.textContent = "読み込めませんでした。「データを書き出す」で作ったファイルを選んでください。";
+    importBackupStatus.classList.add("is-error");
+    importBackupInput.value = "";
+  }
+});
 
 // PWA用：Service Workerを登録してオフラインでも開けるようにする
 if ("serviceWorker" in navigator) {
