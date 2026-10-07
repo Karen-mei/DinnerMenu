@@ -13,13 +13,13 @@ textarea {
 body {
   margin: 0;
   font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
-  background: #fff7f0;
+  background: #fdf7e9;
   color: #333;
   padding-bottom: env(safe-area-inset-bottom);
 }
 
 .app-header {
-  background: #c2410c;
+  background: #866c09;
   color: white;
   padding: 16px env(safe-area-inset-right) 16px calc(16px + env(safe-area-inset-left));
   padding-top: calc(16px + env(safe-area-inset-top));
@@ -90,7 +90,7 @@ body {
 .info-panel h3 {
   margin: 0 0 6px;
   font-size: 0.9rem;
-  color: #c2410c;
+  color: #866c09;
 }
 
 .info-panel p {
@@ -136,14 +136,14 @@ body {
   margin-top: 16px;
   padding: 10px;
   font-size: 0.9rem;
-  color: #c2410c;
+  color: #866c09;
   text-decoration: none;
-  border: 1px solid #ffccbc;
+  border: 1px solid #ece4c6;
   border-radius: 8px;
 }
 
 .nav-link-btn:active {
-  background: #fff0e8;
+  background: #f7f5ed;
 }
 
 button.nav-link-btn {
@@ -161,7 +161,7 @@ button.nav-link-btn {
 
 .import-warning {
   margin-top: 8px;
-  color: #c2410c;
+  color: #866c09;
 }
 
 .share-btn {
@@ -203,7 +203,7 @@ main {
 .add-form button {
   padding: 10px 16px;
   font-size: 1rem;
-  background: #c2410c;
+  background: #866c09;
   color: white;
   border: none;
   border-radius: 8px;
@@ -211,7 +211,7 @@ main {
 }
 
 .add-form button:active {
-  background: #9a3409;
+  background: #514205;
 }
 
 .wish-list {
@@ -270,7 +270,7 @@ main .card + .card {
 }
 
 .allergy-warning {
-  color: #c2410c;
+  color: #866c09;
   font-weight: bold;
 }
 
@@ -305,14 +305,14 @@ main .card + .card {
   padding: 8px 10px;
   font-size: 0.85rem;
   background: white;
-  color: #c2410c;
-  border: 1px solid #ffccbc;
+  color: #866c09;
+  border: 1px solid #ece4c6;
   border-radius: 8px;
   cursor: pointer;
 }
 
 .period-nav button:active {
-  background: #fff0e8;
+  background: #f7f5ed;
 }
 
 .side-dish-title {
@@ -346,7 +346,7 @@ main .card + .card {
   width: 100%;
   padding: 10px 16px;
   font-size: 1rem;
-  background: #c2410c;
+  background: #866c09;
   color: white;
   border: none;
   border-radius: 8px;
@@ -354,7 +354,7 @@ main .card + .card {
 }
 
 .stock-form > button:active {
-  background: #9a3409;
+  background: #514205;
 }
 
 .stock-form-row {
@@ -379,7 +379,7 @@ main .card + .card {
 .stock-form-row button {
   padding: 10px 16px;
   font-size: 1rem;
-  background: #c2410c;
+  background: #866c09;
   color: white;
   border: none;
   border-radius: 8px;
@@ -388,14 +388,14 @@ main .card + .card {
 }
 
 .stock-form-row button:active {
-  background: #9a3409;
+  background: #514205;
 }
 
 .budget-estimate {
   margin: 0 0 12px;
   font-size: 1rem;
   font-weight: bold;
-  color: #c2410c;
+  color: #866c09;
 }
 
 .week-list {
@@ -414,7 +414,7 @@ main .card + .card {
 }
 
 .week-list li.is-today .day-label {
-  color: #c2410c;
+  color: #866c09;
 }
 
 .day-label {
@@ -444,8 +444,8 @@ main .card + .card {
 }
 
 .member-btn.is-selected {
-  background: #c2410c;
-  border-color: #c2410c;
+  background: #866c09;
+  border-color: #866c09;
   color: white;
 }
 
@@ -469,7 +469,7 @@ main .card + .card {
 .ai-step button {
   padding: 10px 16px;
   font-size: 0.95rem;
-  background: #c2410c;
+  background: #866c09;
   color: white;
   border: none;
   border-radius: 8px;
@@ -477,7 +477,7 @@ main .card + .card {
 }
 
 .ai-step button:active {
-  background: #9a3409;
+  background: #514205;
 }
 
 .ai-textarea {
@@ -528,7 +528,7 @@ main .card + .card {
   display: block;
   font-size: 0.85rem;
   font-weight: bold;
-  color: #c2410c;
+  color: #866c09;
   margin-bottom: 2px;
 }
 
@@ -549,7 +549,7 @@ main .card + .card {
 }
 
 .menu-dish-btn:active {
-  background: #fff0e8;
+  background: #f7f5ed;
 }
 
 .menu-dish-input {
@@ -558,7 +558,7 @@ main .card + .card {
   font-size: 1rem;
   padding: 6px;
   margin: 0 0 2px -6px;
-  border: 1px solid #c2410c;
+  border: 1px solid #866c09;
   border-radius: 6px;
   font-family: inherit;
 }
@@ -596,7 +596,7 @@ main .card + .card {
 .shopping-category {
   font-size: 0.8rem;
   font-weight: bold;
-  color: #c2410c;
+  color: #866c09;
   padding: 14px 0 4px;
   border-bottom: none;
 }
@@ -622,7 +622,7 @@ main .card + .card {
   height: 22px;
   margin-top: 2px;
   flex-shrink: 0;
-  accent-color: #c2410c;
+  accent-color: #866c09;
 }
 
 .shopping-text {
@@ -669,7 +669,7 @@ main .card + .card {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
-  accent-color: #c2410c;
+  accent-color: #866c09;
 }
 
 .reorder-group {
@@ -693,8 +693,8 @@ main .card + .card {
 }
 
 .reorder-btn:active:not(:disabled) {
-  background: #fff0e8;
-  color: #c2410c;
+  background: #f7f5ed;
+  color: #866c09;
 }
 
 .reorder-btn:disabled {
