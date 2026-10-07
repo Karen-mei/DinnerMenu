@@ -1,37 +1,13 @@
 // 「献立リスト」ページの画面表示
 // トップ画面で保存した献立（期間のブックマーク）を一覧表示し、
 // タップするとその期間を表示する状態にしてトップ画面に戻る。
-const SAVED_MENUS_KEY = "menuApp.savedMenus";
+// SAVED_MENUS_KEY・SIDE_DISH_KEY・loadSavedMenus・saveSavedMenus・loadAllSideDishes・
+// MENU_STORAGE_KEY・loadMenu は js/shared.js にまとめてあり、menus.htmlでこのファイルより先に読み込んでいる。
 const PERIOD_STORAGE_KEY = "menuApp.periodStart";
 const PERIOD_END_STORAGE_KEY = "menuApp.periodEnd";
-const SIDE_DISH_KEY = "menuApp.sideDishes";
-
-function loadAllSideDishes() {
-  const raw = localStorage.getItem(SIDE_DISH_KEY);
-  if (!raw) return {};
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return {};
-  }
-}
 
 const savedMenuList = document.getElementById("saved-menu-list");
 const savedMenuEmpty = document.getElementById("saved-menu-empty");
-
-function loadSavedMenus() {
-  const raw = localStorage.getItem(SAVED_MENUS_KEY);
-  if (!raw) return [];
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
-
-function saveSavedMenus(list) {
-  localStorage.setItem(SAVED_MENUS_KEY, JSON.stringify(list));
-}
 
 function renderSavedMenus() {
   const list = loadSavedMenus();
@@ -96,7 +72,6 @@ renderSavedMenus();
 // 「好みと傾向を分析する」機能
 // 保存した献立＋その期間の結果・メモをもとに質問文を作り、Claudeの返事を
 // 「好みと傾向」欄に読み込む。この欄は、今後のメイン画面での献立生成にも使われる。
-const MENU_STORAGE_KEY = "menuApp.menu";
 const PERIOD_NOTES_KEY = "menuApp.periodNotes";
 const PREFERENCE_PROFILE_KEY = "menuApp.preferenceProfile";
 
@@ -109,16 +84,6 @@ const trendResponseInput = document.getElementById("trend-response-input");
 const loadTrendBtn = document.getElementById("load-trend-btn");
 const loadTrendStatus = document.getElementById("load-trend-status");
 const preferenceProfileInput = document.getElementById("preference-profile-input");
-
-function loadMenu() {
-  const raw = localStorage.getItem(MENU_STORAGE_KEY);
-  if (!raw) return {};
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return {};
-  }
-}
 
 function loadAllPeriodNotes() {
   const raw = localStorage.getItem(PERIOD_NOTES_KEY);

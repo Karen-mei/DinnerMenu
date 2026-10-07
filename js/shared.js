@@ -45,3 +45,93 @@ function loadPantry() {
     return [];
   }
 }
+
+// 「アレルギー」「苦手な食材」「献立」「副菜」「保存した献立」のデータ読み書きも、
+// index.html・dislikes.html・menus.html など複数ページで必要になるので、ここにまとめる。
+
+const ALLERGY_STORAGE_KEY = "menuApp.allergies";
+
+function loadAllergies() {
+  const raw = localStorage.getItem(ALLERGY_STORAGE_KEY);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function saveAllergies(items) {
+  localStorage.setItem(ALLERGY_STORAGE_KEY, JSON.stringify(items));
+}
+
+const DISLIKE_STORAGE_KEY = "menuApp.dislikedIngredients";
+const DEFAULT_DISLIKED_INGREDIENTS = [];
+
+function loadDislikedIngredients() {
+  const raw = localStorage.getItem(DISLIKE_STORAGE_KEY);
+  if (!raw) {
+    const defaults = DEFAULT_DISLIKED_INGREDIENTS.map((text, i) => ({ id: i, text, until: "", memberIds: [] }));
+    saveDislikedIngredients(defaults);
+    return defaults;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function saveDislikedIngredients(items) {
+  localStorage.setItem(DISLIKE_STORAGE_KEY, JSON.stringify(items));
+}
+
+const MENU_STORAGE_KEY = "menuApp.menu";
+
+function loadMenu() {
+  const raw = localStorage.getItem(MENU_STORAGE_KEY);
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function saveMenu(menuMap) {
+  localStorage.setItem(MENU_STORAGE_KEY, JSON.stringify(menuMap));
+}
+
+const SIDE_DISH_KEY = "menuApp.sideDishes";
+
+function loadAllSideDishes() {
+  const raw = localStorage.getItem(SIDE_DISH_KEY);
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function saveSideDishesForPeriod(periodKey, dishes) {
+  const all = loadAllSideDishes();
+  all[periodKey] = dishes;
+  localStorage.setItem(SIDE_DISH_KEY, JSON.stringify(all));
+}
+
+const SAVED_MENUS_KEY = "menuApp.savedMenus";
+
+function loadSavedMenus() {
+  const raw = localStorage.getItem(SAVED_MENUS_KEY);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function saveSavedMenus(list) {
+  localStorage.setItem(SAVED_MENUS_KEY, JSON.stringify(list));
+}

@@ -6,8 +6,7 @@
 // 家族を削除する前に、その人がアレルギー・苦手食材の対象に選ばれていないか確認する。
 // 削除すると登録自体は残るが、対象が「家族全員」扱いに変わってしまうため、
 // 気づかないまま範囲が広がらないよう一声かける。
-const ALLERGY_STORAGE_KEY = "menuApp.allergies";
-const DISLIKE_STORAGE_KEY = "menuApp.dislikedIngredients";
+// ALLERGY_STORAGE_KEY・DISLIKE_STORAGE_KEY は js/shared.js にまとめてある。
 
 function countReferencesToMember(memberId) {
   let count = 0;

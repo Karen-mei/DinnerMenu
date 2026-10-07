@@ -88,25 +88,10 @@ form.addEventListener("submit", (event) => {
 
 render(loadWishes());
 
-// 「苦手な食材」のデータ読み書き（画面はdislikes.htmlの方にある）
+// 「苦手な食材」のデータ読み書き（DISLIKE_STORAGE_KEY・loadDislikedIngredients）は
+// js/shared.js にまとめてある（画面はdislikes.htmlの方にある）。
 // ここに登録したものは、毎回のAIへの質問文で「使わないでください」として伝える。
 // 「いつまで」が設定されていて、その日を過ぎていたら対象外にする（体調や時期によって一時的に避けたいもの、等）。
-const DISLIKE_STORAGE_KEY = "menuApp.dislikedIngredients";
-const DEFAULT_DISLIKED_INGREDIENTS = [];
-
-function loadDislikedIngredients() {
-  const raw = localStorage.getItem(DISLIKE_STORAGE_KEY);
-  if (!raw) {
-    const defaults = DEFAULT_DISLIKED_INGREDIENTS.map((text, i) => ({ id: i, text, until: "" }));
-    localStorage.setItem(DISLIKE_STORAGE_KEY, JSON.stringify(defaults));
-    return defaults;
-  }
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
 
 function loadActiveDislikedIngredients() {
   const todayKeyValue = toDateKey(new Date());
@@ -443,25 +428,14 @@ periodEndInput.addEventListener("change", () => {
 
 refreshPeriodInput();
 
-// 「アレルギー」のデータ読み込み（画面はdislikes.htmlの方にある）
-// 苦手な食材とは別枠で管理し、AIへの質問文では「絶対に使わないでください」という
-// 強い言い方で伝える。安全に関わるため、誰が対象かも書いて伝える。
-const ALLERGY_STORAGE_KEY = "menuApp.allergies";
-
-function loadAllergies() {
-  const raw = localStorage.getItem(ALLERGY_STORAGE_KEY);
-  if (!raw) return [];
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
+// 「アレルギー」のデータ読み書き（ALLERGY_STORAGE_KEY・loadAllergies）は js/shared.js に
+// まとめてある。苦手な食材とは別枠で管理し、AIへの質問文では「絶対に使わないでください」
+// という強い言い方で伝える。安全に関わるため、誰が対象かも書いて伝える。
 
 // 「AIに献立を考えてもらう」機能
 // 裏方サーバーは使わず、質問文をコピーしてClaudeアプリに貼り付けてもらい、
 // 返ってきた答えを貼り付けてもらう方式（無料で使える）。
-const MENU_STORAGE_KEY = "menuApp.menu";
+// MENU_STORAGE_KEY・loadMenu・saveMenu は js/shared.js にまとめてある。
 
 const makePromptBtn = document.getElementById("make-prompt-btn");
 const promptArea = document.getElementById("prompt-area");
@@ -699,25 +673,9 @@ periodNotesInput.addEventListener("blur", () => {
 renderPeriodNotes();
 
 // AIが提案する「副菜」（期間ごとに保存）
-const SIDE_DISH_KEY = "menuApp.sideDishes";
+// SIDE_DISH_KEY・loadAllSideDishes・saveSideDishesForPeriod は js/shared.js にまとめてある。
 const sideDishList = document.getElementById("side-dish-list");
 const sideDishEmpty = document.getElementById("side-dish-empty");
-
-function loadAllSideDishes() {
-  const raw = localStorage.getItem(SIDE_DISH_KEY);
-  if (!raw) return {};
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return {};
-  }
-}
-
-function saveSideDishesForPeriod(periodKey, dishes) {
-  const all = loadAllSideDishes();
-  all[periodKey] = dishes;
-  localStorage.setItem(SIDE_DISH_KEY, JSON.stringify(all));
-}
 
 function renderSideDishes() {
   const dishes = loadAllSideDishes()[getPeriodKey()] || [];
@@ -746,24 +704,10 @@ function renderSideDishes() {
 renderSideDishes();
 
 // 「献立リスト」への保存（期間に名前を付けてブックマークしておく機能。画面は menus.html）
-const SAVED_MENUS_KEY = "menuApp.savedMenus";
+// SAVED_MENUS_KEY・loadSavedMenus・saveSavedMenus は js/shared.js にまとめてある。
 const saveMenuForm = document.getElementById("save-menu-form");
 const saveMenuLabelInput = document.getElementById("save-menu-label-input");
 const saveMenuStatus = document.getElementById("save-menu-status");
-
-function loadSavedMenus() {
-  const raw = localStorage.getItem(SAVED_MENUS_KEY);
-  if (!raw) return [];
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
-
-function saveSavedMenus(list) {
-  localStorage.setItem(SAVED_MENUS_KEY, JSON.stringify(list));
-}
 
 saveMenuForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -798,20 +742,6 @@ saveMenuForm.addEventListener("submit", (event) => {
   saveMenuStatus.textContent = "保存しました。「保存した献立リストを見る」から確認できます。";
   saveMenuStatus.classList.remove("is-error");
 });
-
-function loadMenu() {
-  const raw = localStorage.getItem(MENU_STORAGE_KEY);
-  if (!raw) return {};
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return {};
-  }
-}
-
-function saveMenu(menuMap) {
-  localStorage.setItem(MENU_STORAGE_KEY, JSON.stringify(menuMap));
-}
 
 // AIの返事はコードブロック（```）で囲まれていたり、前置きの文章が付いていたりと
 // 形式がバラつきやすい。何パターンか試して、読み取れたものを使う。
@@ -860,7 +790,24 @@ function findSafetyMatches(menuMap, dateKeys) {
 
   for (const dateKey of dateKeys) {
     const entry = menuMap[dateKey];
-    if (!entry || !Array.isArray(entry.ingredients)) continue;
+    if (!entry) continue;
+
+    // ingredientsに明記されていなくても、料理名自体にアレルギー・苦手食材の
+    // 名前が含まれていることがある（例：「エビチリ」だがingredientsにエビの記載漏れ）
+    if (entry.dish) {
+      for (const item of allergyItems) {
+        if (entry.dish.includes(item.text) || item.text.includes(entry.dish)) {
+          matches.push({ dateKey, dish: entry.dish, ingredientName: "料理名", label: item.text, kind: "アレルギー" });
+        }
+      }
+      for (const item of dislikeItems) {
+        if (entry.dish.includes(item.text) || item.text.includes(entry.dish)) {
+          matches.push({ dateKey, dish: entry.dish, ingredientName: "料理名", label: item.text, kind: "苦手な食材" });
+        }
+      }
+    }
+
+    if (!Array.isArray(entry.ingredients)) continue;
     for (const ing of entry.ingredients) {
       if (!ing.name) continue;
       for (const item of allergyItems) {

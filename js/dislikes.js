@@ -1,12 +1,10 @@
-// 「家族構成」のデータ読み込み（loadFamilyMembers）は js/shared.js にまとめてあり、
-// dislikes.htmlでこのファイルより先に読み込んでいる。苦手な食材・アレルギーの
-// 両方で「誰が対象か」を選ぶのに使う。
+// 「家族構成」のデータ読み込み（loadFamilyMembers）と、「苦手な食材」「アレルギー」の
+// データ読み書き（DISLIKE/ALLERGY_STORAGE_KEY・load/save系）は js/shared.js にまとめてあり、
+// dislikes.htmlでこのファイルより先に読み込んでいる。
 
 // 「苦手な食材」ページの画面表示
 // 「いつまで」を設定すると、その日を過ぎたらAIへの質問文には含めなくなる
 // （体調や時期によって一時的に避けたいもの、のための制限）。空欄ならずっと有効。
-const DISLIKE_STORAGE_KEY = "menuApp.dislikedIngredients";
-const DEFAULT_DISLIKED_INGREDIENTS = [];
 
 const dislikeForm = document.getElementById("dislike-form");
 const dislikeNameInput = document.getElementById("dislike-name-input");
@@ -23,24 +21,6 @@ function todayKey() {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
-}
-
-function loadDislikedIngredients() {
-  const raw = localStorage.getItem(DISLIKE_STORAGE_KEY);
-  if (!raw) {
-    const defaults = DEFAULT_DISLIKED_INGREDIENTS.map((text, i) => ({ id: i, text, until: "", memberIds: [] }));
-    saveDislikedIngredients(defaults);
-    return defaults;
-  }
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
-
-function saveDislikedIngredients(items) {
-  localStorage.setItem(DISLIKE_STORAGE_KEY, JSON.stringify(items));
 }
 
 // フォームの「対象の家族」ボタン群を作る。未選択（何も押していない）状態は
@@ -132,7 +112,6 @@ renderDislikes();
 // 「アレルギー」機能
 // 苦手な食材とは別枠。安全に関わるため、AIへの質問文では「絶対に使わないでください」と
 // 強く伝える（app.jsのbuildPrompt内）。誰が対象かも家族構成から選べるようにする。
-const ALLERGY_STORAGE_KEY = "menuApp.allergies";
 
 const allergyForm = document.getElementById("allergy-form");
 const allergyNameInput = document.getElementById("allergy-name-input");
@@ -141,20 +120,6 @@ const allergyList = document.getElementById("allergy-list");
 const allergyEmptyMessage = document.getElementById("allergy-empty-message");
 
 let selectedAllergyMemberIds = new Set();
-
-function loadAllergies() {
-  const raw = localStorage.getItem(ALLERGY_STORAGE_KEY);
-  if (!raw) return [];
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
-
-function saveAllergies(items) {
-  localStorage.setItem(ALLERGY_STORAGE_KEY, JSON.stringify(items));
-}
 
 // フォームの「対象の家族」ボタン群を作る。未選択（何も押していない）状態は
 // 「家族全員が対象」として扱う＝デフォルトで一番安全な側に倒す。
