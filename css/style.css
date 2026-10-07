@@ -71,20 +71,33 @@ body {
   font-size: 1.05rem;
 }
 
-.info-panel ul {
-  margin: 0;
-  padding-left: 18px;
+.info-section {
+  margin-bottom: 16px;
 }
 
-.info-panel li {
-  margin-bottom: 10px;
+.info-section:last-child {
+  margin-bottom: 0;
+}
+
+.info-panel h3 {
+  margin: 0 0 6px;
+  font-size: 0.9rem;
+  color: #c2410c;
+}
+
+.info-panel p {
+  margin: 0 0 6px;
   font-size: 0.85rem;
   line-height: 1.6;
   color: #444;
 }
 
-.info-panel li:last-child {
+.info-panel p:last-child {
   margin-bottom: 0;
+}
+
+.info-panel .info-note {
+  color: #888;
 }
 
 .info-close-btn {
