@@ -19,7 +19,7 @@ body {
 }
 
 .app-header {
-  background: #ac5f0c;
+  background: #ec9c3c;
   color: white;
   padding: 16px env(safe-area-inset-right) 16px calc(16px + env(safe-area-inset-left));
   padding-top: calc(16px + env(safe-area-inset-top));
@@ -90,7 +90,7 @@ body {
 .info-panel h3 {
   margin: 0 0 6px;
   font-size: 0.9rem;
-  color: #ac5f0c;
+  color: #ec9c3c;
 }
 
 .info-panel p {
@@ -136,7 +136,7 @@ body {
   margin-top: 16px;
   padding: 10px;
   font-size: 0.9rem;
-  color: #ac5f0c;
+  color: #ec9c3c;
   text-decoration: none;
   border: 1px solid #ffd4a3;
   border-radius: 8px;
@@ -161,7 +161,7 @@ button.nav-link-btn {
 
 .import-warning {
   margin-top: 8px;
-  color: #ac5f0c;
+  color: #ec9c3c;
 }
 
 .share-btn {
@@ -203,7 +203,7 @@ main {
 .add-form button {
   padding: 10px 16px;
   font-size: 1rem;
-  background: #ac5f0c;
+  background: #ec9c3c;
   color: white;
   border: none;
   border-radius: 8px;
@@ -211,7 +211,7 @@ main {
 }
 
 .add-form button:active {
-  background: #7a4208;
+  background: #bd7d30;
 }
 
 .wish-list {
@@ -270,7 +270,7 @@ main .card + .card {
 }
 
 .allergy-warning {
-  color: #ac5f0c;
+  color: #ec9c3c;
   font-weight: bold;
 }
 
@@ -305,7 +305,7 @@ main .card + .card {
   padding: 8px 10px;
   font-size: 0.85rem;
   background: white;
-  color: #ac5f0c;
+  color: #ec9c3c;
   border: 1px solid #ffd4a3;
   border-radius: 8px;
   cursor: pointer;
@@ -346,7 +346,7 @@ main .card + .card {
   width: 100%;
   padding: 10px 16px;
   font-size: 1rem;
-  background: #ac5f0c;
+  background: #ec9c3c;
   color: white;
   border: none;
   border-radius: 8px;
@@ -354,7 +354,7 @@ main .card + .card {
 }
 
 .stock-form > button:active {
-  background: #7a4208;
+  background: #bd7d30;
 }
 
 .stock-form-row {
@@ -379,7 +379,7 @@ main .card + .card {
 .stock-form-row button {
   padding: 10px 16px;
   font-size: 1rem;
-  background: #ac5f0c;
+  background: #ec9c3c;
   color: white;
   border: none;
   border-radius: 8px;
@@ -388,14 +388,14 @@ main .card + .card {
 }
 
 .stock-form-row button:active {
-  background: #7a4208;
+  background: #bd7d30;
 }
 
 .budget-estimate {
   margin: 0 0 12px;
   font-size: 1rem;
   font-weight: bold;
-  color: #ac5f0c;
+  color: #ec9c3c;
 }
 
 .week-list {
@@ -414,7 +414,7 @@ main .card + .card {
 }
 
 .week-list li.is-today .day-label {
-  color: #ac5f0c;
+  color: #ec9c3c;
 }
 
 .day-label {
@@ -444,8 +444,8 @@ main .card + .card {
 }
 
 .member-btn.is-selected {
-  background: #ac5f0c;
-  border-color: #ac5f0c;
+  background: #ec9c3c;
+  border-color: #ec9c3c;
   color: white;
 }
 
@@ -469,7 +469,7 @@ main .card + .card {
 .ai-step button {
   padding: 10px 16px;
   font-size: 0.95rem;
-  background: #ac5f0c;
+  background: #ec9c3c;
   color: white;
   border: none;
   border-radius: 8px;
@@ -477,7 +477,7 @@ main .card + .card {
 }
 
 .ai-step button:active {
-  background: #7a4208;
+  background: #bd7d30;
 }
 
 .ai-textarea {
@@ -528,7 +528,7 @@ main .card + .card {
   display: block;
   font-size: 0.85rem;
   font-weight: bold;
-  color: #ac5f0c;
+  color: #ec9c3c;
   margin-bottom: 2px;
 }
 
@@ -558,7 +558,7 @@ main .card + .card {
   font-size: 1rem;
   padding: 6px;
   margin: 0 0 2px -6px;
-  border: 1px solid #ac5f0c;
+  border: 1px solid #ec9c3c;
   border-radius: 6px;
   font-family: inherit;
 }
@@ -596,7 +596,7 @@ main .card + .card {
 .shopping-category {
   font-size: 0.8rem;
   font-weight: bold;
-  color: #ac5f0c;
+  color: #ec9c3c;
   padding: 14px 0 4px;
   border-bottom: none;
 }
@@ -622,7 +622,7 @@ main .card + .card {
   height: 22px;
   margin-top: 2px;
   flex-shrink: 0;
-  accent-color: #ac5f0c;
+  accent-color: #ec9c3c;
 }
 
 .shopping-text {
@@ -669,7 +669,7 @@ main .card + .card {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
-  accent-color: #ac5f0c;
+  accent-color: #ec9c3c;
 }
 
 .reorder-group {
@@ -694,7 +694,7 @@ main .card + .card {
 
 .reorder-btn:active:not(:disabled) {
   background: #fff1e0;
-  color: #ac5f0c;
+  color: #ec9c3c;
 }
 
 .reorder-btn:disabled {
