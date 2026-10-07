@@ -498,6 +498,12 @@ main .card + .card {
   min-height: 1.2em;
 }
 
+.load-status {
+  /* 読み込み結果は複数行のメッセージ（\nで区切る）を入れることがあるので、
+     改行をそのまま画面の改行として表示する */
+  white-space: pre-line;
+}
+
 .copy-status.is-error,
 .load-status.is-error {
   color: #d32f2f;

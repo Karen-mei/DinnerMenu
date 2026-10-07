@@ -801,10 +801,13 @@ function extractJson(text) {
   return null;
 }
 
-// AIが"2026-10-1"のように指定と違う日付形式を返すと、カレンダー側では
-// 一致する日が見つからず、エラーも出ないままその日の献立だけ表示されなくなる。
-// それを防ぐため、読み込み時に形式をチェックして件数を教える。
-const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+// AIが"2026-10-1"のように指定と違う日付形式を返したり、"2026-13-45"のような
+// 存在しない日付・期間の外の日付を返したりすると、カレンダー側では一致する日が
+// 見つからず、エラーも出ないままその日の献立だけ表示されなくなる。
+// それを防ぐため、読み込み時に「今回の期間に実在する日付か」までチェックする。
+function isValidPeriodDateKey(dateKey) {
+  return getPeriodDates().some((date) => toDateKey(date) === dateKey);
+}
 
 // 読み込んだ食材に、登録済みのアレルギー・苦手食材と同じ・似た名前が無いか
 // 簡単に突き合わせる。文字列の部分一致だけなので完璧ではないが、
@@ -859,7 +862,7 @@ loadMenuBtn.addEventListener("click", () => {
   let invalidDateCount = 0;
   for (const day of parsed.days) {
     if (!day.date) continue;
-    if (!DATE_KEY_PATTERN.test(day.date)) {
+    if (!isValidPeriodDateKey(day.date)) {
       invalidDateCount++;
       continue;
     }
@@ -887,7 +890,7 @@ loadMenuBtn.addEventListener("click", () => {
   let hasWarning = false;
 
   if (invalidDateCount > 0) {
-    statusLines.push(`⚠️ ${invalidDateCount}件、日付の形式が読み取れず反映できませんでした。Claudeに「YYYY-MM-DD」形式で出し直してもらってください。`);
+    statusLines.push(`⚠️ ${invalidDateCount}件、日付が正しく読み取れず反映できませんでした（形式が違う、または指定した期間の外の日付です）。Claudeに「YYYY-MM-DD」形式・指定した期間内で出し直してもらってください。`);
     hasWarning = true;
   }
 
@@ -1022,6 +1025,20 @@ function startEditingDish(dateKey, date) {
     current[dateKey] = { ...current[dateKey], dish: newDish || null, ingredients: newIngredients };
     saveMenu(current);
     renderMenu();
+
+    // AIの返事を読み込んだときだけでなく、手で食材を書き換えたときも
+    // 登録済みのアレルギー・苦手食材と似た名前がないか確認する
+    const safetyMatches = findSafetyMatches(current, [dateKey]);
+    if (safetyMatches.length > 0) {
+      const allergyMatches = safetyMatches.filter((m) => m.kind === "アレルギー");
+      const target = allergyMatches.length > 0 ? allergyMatches : safetyMatches;
+      const examples = target
+        .slice(0, 3)
+        .map((m) => `${m.ingredientName}（${m.kind}：${m.label}）`)
+        .join("、");
+      loadStatus.textContent = `⚠️ ${allergyMatches.length > 0 ? "アレルギー" : "苦手な食材"}に似た名前の食材が見つかりました：${examples}。使う前に必ずご自身の目で確認してください。`;
+      loadStatus.classList.add("is-error");
+    }
   }
 
   input.addEventListener("keydown", (event) => {
