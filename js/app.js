@@ -433,8 +433,8 @@ refreshPeriodInput();
 // という強い言い方で伝える。安全に関わるため、誰が対象かも書いて伝える。
 
 // 「AIに献立を考えてもらう」機能
-// 裏方サーバーは使わず、質問文をコピーしてClaudeアプリに貼り付けてもらい、
-// 返ってきた答えを貼り付けてもらう方式（無料で使える）。
+// 裏方サーバーは使わず、質問文をコピーしてChatGPT・Claudeなどお好きなAIアプリに
+// 貼り付けてもらい、返ってきた答えを貼り付けてもらう方式（無料で使える）。
 // MENU_STORAGE_KEY・loadMenu・saveMenu は js/shared.js にまとめてある。
 
 const makePromptBtn = document.getElementById("make-prompt-btn");
@@ -578,7 +578,7 @@ makePromptBtn.addEventListener("click", () => {
 copyPromptBtn.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(promptOutput.value);
-    copyStatus.textContent = "コピーしました。Claudeアプリに貼り付けてください。";
+    copyStatus.textContent = "コピーしました。ChatGPTやClaudeなど、お使いのAIアプリに貼り付けてください。";
     copyStatus.classList.remove("is-error");
   } catch {
     // クリップボードが使えない環境向けに、手動選択できるようにしておく
@@ -835,12 +835,12 @@ loadMenuBtn.addEventListener("click", () => {
 
   const parsed = extractJson(text);
   if (!parsed) {
-    loadStatus.textContent = "読み取れませんでした。AIの返事の中にJSON（{ … }の形式のデータ）が見つかりません。Claudeの返事を、説明文も含めてそのまま全部貼り付けてみてください。";
+    loadStatus.textContent = "読み取れませんでした。AIの返事の中にJSON（{ … }の形式のデータ）が見つかりません。AIの返事を、説明文も含めてそのまま全部貼り付けてみてください。";
     loadStatus.classList.add("is-error");
     return;
   }
   if (!Array.isArray(parsed.days)) {
-    loadStatus.textContent = "JSONとしては読み取れましたが、「days」のデータが見つかりませんでした。質問文の形式が守られていない可能性があるので、Claudeにもう一度、指定した形式で出し直してもらってください。";
+    loadStatus.textContent = "JSONとしては読み取れましたが、「days」のデータが見つかりませんでした。質問文の形式が守られていない可能性があるので、AIにもう一度、指定した形式で出し直してもらってください。";
     loadStatus.classList.add("is-error");
     return;
   }
@@ -878,7 +878,7 @@ loadMenuBtn.addEventListener("click", () => {
   let hasWarning = false;
 
   if (invalidDateCount > 0) {
-    statusLines.push(`⚠️ ${invalidDateCount}件、日付が正しく読み取れず反映できませんでした（形式が違う、または指定した期間の外の日付です）。Claudeに「YYYY-MM-DD」形式・指定した期間内で出し直してもらってください。`);
+    statusLines.push(`⚠️ ${invalidDateCount}件、日付が正しく読み取れず反映できませんでした（形式が違う、または指定した期間の外の日付です）。AIに「YYYY-MM-DD」形式・指定した期間内で出し直してもらってください。`);
     hasWarning = true;
   }
 

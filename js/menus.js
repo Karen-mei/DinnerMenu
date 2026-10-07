@@ -70,7 +70,7 @@ function renderSavedMenus() {
 renderSavedMenus();
 
 // 「好みと傾向を分析する」機能
-// 保存した献立＋その期間の結果・メモをもとに質問文を作り、Claudeの返事を
+// 保存した献立＋その期間の結果・メモをもとに質問文を作り、AIの返事を
 // 「好みと傾向」欄に読み込む。この欄は、今後のメイン画面での献立生成にも使われる。
 const PERIOD_NOTES_KEY = "menuApp.periodNotes";
 const PREFERENCE_PROFILE_KEY = "menuApp.preferenceProfile";
@@ -166,7 +166,7 @@ makeTrendPromptBtn.addEventListener("click", () => {
 copyTrendPromptBtn.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(trendPromptOutput.value);
-    copyTrendStatus.textContent = "コピーしました。Claudeアプリに貼り付けてください。";
+    copyTrendStatus.textContent = "コピーしました。ChatGPTやClaudeなど、お使いのAIアプリに貼り付けてください。";
     copyTrendStatus.classList.remove("is-error");
   } catch {
     trendPromptOutput.focus();
