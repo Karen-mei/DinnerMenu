@@ -1095,9 +1095,11 @@ extraShoppingForm.addEventListener("submit", (event) => {
   extraShoppingNameInput.focus();
 });
 
+// チェック済み（買った）状態は期間ごとに分けて保存する。食材名だけで保存すると、
+// 先週チェックした「鶏肉」が来週分でもチェック済みのまま出てきてしまうため。
 const SHOPPING_CHECKED_KEY = "menuApp.shoppingChecked";
 
-function loadShoppingChecked() {
+function loadAllShoppingChecked() {
   const raw = localStorage.getItem(SHOPPING_CHECKED_KEY);
   if (!raw) return {};
   try {
@@ -1107,8 +1109,14 @@ function loadShoppingChecked() {
   }
 }
 
-function saveShoppingChecked(checkedMap) {
-  localStorage.setItem(SHOPPING_CHECKED_KEY, JSON.stringify(checkedMap));
+function loadShoppingChecked(periodKey) {
+  return loadAllShoppingChecked()[periodKey] || {};
+}
+
+function saveShoppingChecked(periodKey, checkedMap) {
+  const all = loadAllShoppingChecked();
+  all[periodKey] = checkedMap;
+  localStorage.setItem(SHOPPING_CHECKED_KEY, JSON.stringify(all));
 }
 
 // 買う食材リストの中身（カテゴリごとにまとめた食材 + 手動追加した物）を組み立てる。
@@ -1131,13 +1139,41 @@ function getShoppingGroups() {
     }
   }
 
-  // 調味料マスタで「家にある」ものと、「今ある食材」に登録済みのものは買う食材リストから除く
-  const excludeSet = new Set([
-    ...loadPantry().filter((item) => item.hasIt).map((item) => canonicalizeIngredientName(item.name)),
-    ...loadStock().map((item) => canonicalizeIngredientName(item.name)),
-  ]);
-  for (const name of excludeSet) {
+  // 調味料マスタで「家にある」ものは、量を問わず買う食材リストから除く（常備している前提）
+  const pantryExcludeSet = new Set(
+    loadPantry().filter((item) => item.hasIt).map((item) => canonicalizeIngredientName(item.name))
+  );
+  for (const name of pantryExcludeSet) {
     grouped.delete(name);
+  }
+
+  // 「今ある食材」は、必要量から在庫量を差し引く。在庫だけで足りる（必要量以上ある）場合だけ
+  // リストから除き、足りない場合は残りの必要量を表示する。量が比べられない場合は、
+  // 買い忘れを防ぐため安全側に倒して全量をリストに残す。
+  for (const stockItem of loadStock()) {
+    const stockName = canonicalizeIngredientName(stockItem.name);
+    const entry = grouped.get(stockName);
+    if (!entry) continue;
+
+    if (!stockItem.amount) {
+      // 在庫に量の指定がない（品名だけ登録されている）場合は、これまで通り除外する
+      grouped.delete(stockName);
+      continue;
+    }
+
+    const neededTotal = sumAmounts(entry.items.map((item) => item.amount));
+    const neededParsed = neededTotal ? parseAmount(neededTotal) : null;
+    const stockParsed = parseAmount(stockItem.amount);
+
+    if (neededParsed && stockParsed && neededParsed.unit === stockParsed.unit) {
+      const remaining = Math.round((neededParsed.value - stockParsed.value) * 100) / 100;
+      if (remaining <= 0) {
+        grouped.delete(stockName);
+      } else {
+        entry.remainingAmount = `${remaining}${neededParsed.unit}`;
+      }
+    }
+    // 単位が違う・量を読み取れない等で比べられない場合は何もしない（全量を残す）
   }
 
   const extraItems = loadExtraShoppingItems(getPeriodKey());
@@ -1146,10 +1182,11 @@ function getShoppingGroups() {
 
 function renderShoppingList() {
   const { grouped, extraItems } = getShoppingGroups();
+  const periodKey = getPeriodKey();
 
   shoppingList.innerHTML = "";
 
-  const checkedMap = loadShoppingChecked();
+  const checkedMap = loadShoppingChecked(periodKey);
 
   shoppingEmpty.style.display = grouped.size === 0 && extraItems.length === 0 ? "block" : "none";
 
@@ -1166,9 +1203,9 @@ function renderShoppingList() {
     checkbox.checked = Boolean(checkedMap[name]);
     checkbox.setAttribute("aria-label", `${name}を買った`);
     checkbox.addEventListener("change", () => {
-      const current = loadShoppingChecked();
+      const current = loadShoppingChecked(periodKey);
       current[name] = checkbox.checked;
-      saveShoppingChecked(current);
+      saveShoppingChecked(periodKey, current);
       li.classList.toggle("is-checked", checkbox.checked);
     });
     li.appendChild(checkbox);
@@ -1211,7 +1248,7 @@ function renderShoppingList() {
     headerLi.textContent = category;
     shoppingList.appendChild(headerLi);
 
-    for (const [name, { items }] of entries) {
+    for (const [name, { items, remainingAmount }] of entries) {
       const itemTotal = items.reduce((sum, item) => sum + (item.price || 0), 0);
       totalBudget += itemTotal;
 
@@ -1223,7 +1260,8 @@ function renderShoppingList() {
         .join(" ・ ");
 
       const total = sumAmounts(items.map((item) => item.amount));
-      const detailText = total ? `合計 ${total} （${breakdown}）` : breakdown;
+      const totalLabel = remainingAmount ? `在庫を引いて残り ${remainingAmount}` : total ? `合計 ${total}` : "";
+      const detailText = totalLabel ? `${totalLabel} （${breakdown}）` : breakdown;
 
       appendShoppingRow(name, detailText);
     }
@@ -1255,7 +1293,7 @@ function renderShoppingList() {
 // すでにチェック済み（買った）ものは除き、まだ買っていない分だけをまとめる。
 function buildShoppingShareText() {
   const { grouped, extraItems } = getShoppingGroups();
-  const checkedMap = loadShoppingChecked();
+  const checkedMap = loadShoppingChecked(getPeriodKey());
   const lines = [`買う食材リスト（${loadPeriodStart()} 〜 ${loadPeriodEnd()}）`];
 
   for (const category of CATEGORY_ORDER) {
@@ -1265,9 +1303,9 @@ function buildShoppingShareText() {
     if (entries.length === 0) continue;
 
     lines.push("", `【${category}】`);
-    for (const [name, { items }] of entries) {
+    for (const [name, { items, remainingAmount }] of entries) {
       const total = sumAmounts(items.map((item) => item.amount));
-      const amountText = total || items.map((item) => item.amount).filter(Boolean).join("・");
+      const amountText = remainingAmount || total || items.map((item) => item.amount).filter(Boolean).join("・");
       lines.push(amountText ? `・${name}（${amountText}）` : `・${name}`);
     }
   }
