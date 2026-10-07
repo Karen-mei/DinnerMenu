@@ -1,7 +1,7 @@
 // Service Worker：オフラインでもアプリが開けるようにするための仕組み。
 // 「まずネットから最新を取りに行き、取れなければキャッシュ（保存済み）を使う」方式にして、
 // 電波があるときは常に最新版が表示されるようにする。
-const CACHE_NAME = "menu-app-v8";
+const CACHE_NAME = "menu-app-v9";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
@@ -42,12 +42,26 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
+    (async () => {
+      const networkFetch = fetch(event.request).then((response) => {
         const copy = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         return response;
-      })
-      .catch(() => caches.match(event.request))
+      });
+      // 後で（タイムアウト後に）このPromiseが失敗しても無視してよい
+      networkFetch.catch(() => {});
+
+      try {
+        // 完全なオフラインならすぐに失敗するが、電波が弱いだけだとfetchがずっと
+        // 待たされることがあるので、3秒待っても返事がなければキャッシュを使う。
+        return await Promise.race([
+          networkFetch,
+          new Promise((_, reject) => setTimeout(() => reject(new Error("slow network")), 3000)),
+        ]);
+      } catch {
+        const cached = await caches.match(event.request);
+        return cached || networkFetch;
+      }
+    })()
   );
 });
