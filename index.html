@@ -20,9 +20,9 @@
 </header>
 
 <div id="info-overlay" class="info-overlay" hidden>
-  <div class="info-panel">
+  <div class="info-panel" role="dialog" aria-modal="true" aria-labelledby="info-panel-title">
     <button type="button" id="info-close-btn" class="info-close-btn" aria-label="閉じる">×</button>
-    <h2>このアプリについて</h2>
+    <h2 id="info-panel-title">このアプリについて</h2>
     <div class="info-section">
       <h3>■ 好みの傾向について</h3>
       <p>あなたの好みの傾向を蓄積するには、「献立リスト」ページの「好みと傾向を分析する」を利用してください。保存した献立や感想をAIが分析し、その結果を「好みと傾向」欄に保存できます。この内容は今後の献立提案に毎回反映されるため、定期的に更新するのがおすすめです。</p>
@@ -171,7 +171,7 @@
     <p id="last-backup-label" class="section-note"></p>
     <p id="export-backup-status" class="copy-status" aria-live="polite"></p>
 
-    <label for="import-backup-input" class="nav-link-btn import-backup-label">データを取り込む（ファイルを選択）</label>
+    <label for="import-backup-input" id="import-backup-label" class="nav-link-btn import-backup-label" tabindex="0" role="button">データを取り込む（ファイルを選択）</label>
     <input type="file" id="import-backup-input" accept="application/json" hidden>
     <p class="section-note import-warning">⚠️ 取り込むと、今この端末に入っているデータは上書きされます。</p>
     <p id="import-backup-status" class="copy-status" aria-live="polite"></p>

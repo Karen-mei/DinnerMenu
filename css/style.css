@@ -450,8 +450,8 @@ main .card + .card {
 }
 
 .no-cook-btn.is-selected {
-  background: #adb5bd;
-  border-color: #adb5bd;
+  background: #6c757d;
+  border-color: #6c757d;
   color: white;
 }
 

@@ -3,14 +3,23 @@ const infoBtn = document.getElementById("info-btn");
 const infoOverlay = document.getElementById("info-overlay");
 const infoCloseBtn = document.getElementById("info-close-btn");
 
-infoBtn.addEventListener("click", () => {
+function openInfoPanel() {
   infoOverlay.hidden = false;
-});
-infoCloseBtn.addEventListener("click", () => {
+  infoCloseBtn.focus();
+}
+
+function closeInfoPanel() {
   infoOverlay.hidden = true;
-});
+  infoBtn.focus();
+}
+
+infoBtn.addEventListener("click", openInfoPanel);
+infoCloseBtn.addEventListener("click", closeInfoPanel);
 infoOverlay.addEventListener("click", (event) => {
-  if (event.target === infoOverlay) infoOverlay.hidden = true;
+  if (event.target === infoOverlay) closeInfoPanel();
+});
+infoOverlay.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeInfoPanel();
 });
 
 // 「食べたいものメモ」機能
@@ -298,9 +307,11 @@ function renderWeek() {
       btn.type = "button";
       btn.className = "status-btn member-btn";
       btn.textContent = member.name;
-      if (!notCooking && presentIds.includes(member.id)) {
+      const isSelected = !notCooking && presentIds.includes(member.id);
+      if (isSelected) {
         btn.classList.add("is-selected");
       }
+      btn.setAttribute("aria-pressed", String(isSelected));
       btn.addEventListener("click", () => {
         const current = loadWeekStatus();
         const currentEntry = current[dateKey];
@@ -325,6 +336,7 @@ function renderWeek() {
     noCookBtn.className = "status-btn no-cook-btn";
     noCookBtn.textContent = "作らない";
     if (notCooking) noCookBtn.classList.add("is-selected");
+    noCookBtn.setAttribute("aria-pressed", String(notCooking));
     noCookBtn.addEventListener("click", () => {
       const current = loadWeekStatus();
       if (current[dateKey] && current[dateKey].cooking === false) {
@@ -612,8 +624,14 @@ function loadExtraInstruction() {
 }
 
 extraInstructionInput.value = loadExtraInstruction();
+// blurだけだと、入力してすぐアプリを閉じたときに保存されないことがあるので、
+// 入力のたびにも保存する（blurでは最後に前後の空白を取り除く）
+extraInstructionInput.addEventListener("input", () => {
+  localStorage.setItem(EXTRA_INSTRUCTION_KEY, extraInstructionInput.value);
+});
 extraInstructionInput.addEventListener("blur", () => {
-  localStorage.setItem(EXTRA_INSTRUCTION_KEY, extraInstructionInput.value.trim());
+  extraInstructionInput.value = extraInstructionInput.value.trim();
+  localStorage.setItem(EXTRA_INSTRUCTION_KEY, extraInstructionInput.value);
 });
 
 // 副菜の品数（この期間で合計何品くらい欲しいか。空欄なら2品程度をデフォルトにする）
@@ -625,8 +643,12 @@ function loadSideDishCount() {
 }
 
 sideDishCountInput.value = loadSideDishCount();
+sideDishCountInput.addEventListener("input", () => {
+  localStorage.setItem(SIDE_DISH_COUNT_KEY, sideDishCountInput.value);
+});
 sideDishCountInput.addEventListener("blur", () => {
-  localStorage.setItem(SIDE_DISH_COUNT_KEY, sideDishCountInput.value.trim());
+  sideDishCountInput.value = sideDishCountInput.value.trim();
+  localStorage.setItem(SIDE_DISH_COUNT_KEY, sideDishCountInput.value);
 });
 
 // 「好みと傾向」のデータ読み込み（画面はmenus.htmlの方にある）
@@ -656,6 +678,12 @@ function renderPeriodNotes() {
   periodNotesInput.value = all[getPeriodKey()] || "";
 }
 
+// blurだけだと入力直後にアプリを閉じた場合保存されないことがあるので、入力のたびにも保存する
+periodNotesInput.addEventListener("input", () => {
+  const all = loadAllPeriodNotes();
+  all[getPeriodKey()] = periodNotesInput.value;
+  localStorage.setItem(PERIOD_NOTES_KEY, JSON.stringify(all));
+});
 periodNotesInput.addEventListener("blur", () => {
   const all = loadAllPeriodNotes();
   const text = periodNotesInput.value.trim();
@@ -743,6 +771,17 @@ saveMenuForm.addEventListener("submit", (event) => {
   const end = loadPeriodEnd();
   const label = saveMenuLabelInput.value.trim() || `${start} 〜 ${end}`;
 
+  // 期間（開始日・終了日）のしおりだけでなく、保存した時点の献立・副菜の
+  // 中身も一緒に保存しておく。しおりだけだと、同じ日付でAIの献立を読み込み
+  // 直したときに、保存したはずの内容が気づかないうちに置き換わってしまう。
+  const menuMap = loadMenu();
+  const menuSnapshot = {};
+  for (const date of getPeriodDates()) {
+    const dateKey = toDateKey(date);
+    if (menuMap[dateKey]) menuSnapshot[dateKey] = menuMap[dateKey];
+  }
+  const sideDishesSnapshot = loadAllSideDishes()[getPeriodKey()] || [];
+
   const list = loadSavedMenus();
   list.unshift({
     id: Date.now(),
@@ -750,6 +789,8 @@ saveMenuForm.addEventListener("submit", (event) => {
     periodEnd: end,
     label,
     savedAt: new Date().toISOString(),
+    menuSnapshot,
+    sideDishesSnapshot,
   });
   saveSavedMenus(list);
 
@@ -1079,17 +1120,35 @@ function canonicalizeIngredientName(name) {
   return trimmed;
 }
 
+// 「２本」のように全角数字で入力・返答されると、parseAmount等の数字判定に
+// 引っかからず合計できない。量の文字列中の全角数字だけ半角に変換しておく。
+function toHalfWidthDigits(text) {
+  return (text || "").replace(/[０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0));
+}
+
+// AIが price を "300" や "300円" のような文字列で返すことがある。数値以外の
+// 文字を取り除いてから数値に変換し、読み取れなければ0にする。
+function parsePrice(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  if (typeof value === "string") {
+    const digits = toHalfWidthDigits(value).replace(/[^\d.]/g, "");
+    const parsed = parseFloat(digits);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return 0;
+}
+
 function normalizeIngredient(item) {
   if (typeof item === "string") {
     const match = item.match(/^(\S+)\s*(.*)$/);
     const name = canonicalizeIngredientName(match ? match[1] : item);
-    const amount = match ? match[2].trim() : "";
+    const amount = toHalfWidthDigits(match ? match[2].trim() : "");
     return { name, amount, category: "その他", price: 0 };
   }
   const name = canonicalizeIngredientName((item && item.name) || "");
-  const amount = (item && item.amount) || "";
+  const amount = toHalfWidthDigits((item && item.amount) || "");
   const category = CATEGORY_ORDER.includes(item && item.category) ? item.category : "その他";
-  const price = Number.isFinite(item && item.price) ? item.price : 0;
+  const price = parsePrice(item && item.price);
   return { name, amount, category, price };
 }
 
@@ -1450,6 +1509,21 @@ const exportBackupStatus = document.getElementById("export-backup-status");
 const lastBackupLabel = document.getElementById("last-backup-label");
 const importBackupInput = document.getElementById("import-backup-input");
 const importBackupStatus = document.getElementById("import-backup-status");
+const importBackupLabel = document.getElementById("import-backup-label");
+
+// ラベル要素は本来キーボードでは選べないので、Enter/Spaceでもファイル選択を開けるようにする
+importBackupLabel.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    importBackupInput.click();
+  }
+});
+
+// Safariはしばらく開かないと保存データが消えることがあるため、できるだけ消えにくくするよう頼んでおく
+// （対応していないブラウザでは何もしない。ユーザーに確認が出ることもあるが、失敗しても無視してよい）
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist().catch(() => {});
+}
 
 function collectBackupData() {
   const data = {};
@@ -1466,7 +1540,13 @@ const LAST_BACKUP_KEY = "menuApp.lastBackupAt";
 
 function renderLastBackupDate() {
   const date = localStorage.getItem(LAST_BACKUP_KEY);
-  lastBackupLabel.textContent = date ? `前回の書き出し：${date}` : "まだ一度も書き出していません。";
+  if (!date) {
+    lastBackupLabel.textContent = "まだ一度も書き出していません。";
+    return;
+  }
+  const daysSince = Math.floor((new Date() - parseDateKey(date)) / (1000 * 60 * 60 * 24));
+  const staleNote = daysSince >= 14 ? "（2週間以上たっています。書き出しをおすすめします）" : "";
+  lastBackupLabel.textContent = `前回の書き出し：${date}${staleNote}`;
 }
 
 exportBackupBtn.addEventListener("click", () => {

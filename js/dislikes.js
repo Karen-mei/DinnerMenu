@@ -54,7 +54,9 @@ function renderDislikeMemberButtons() {
     btn.type = "button";
     btn.className = "status-btn member-btn";
     btn.textContent = member.name;
-    if (selectedDislikeMemberIds.has(member.id)) btn.classList.add("is-selected");
+    const isSelected = selectedDislikeMemberIds.has(member.id);
+    if (isSelected) btn.classList.add("is-selected");
+    btn.setAttribute("aria-pressed", String(isSelected));
     btn.addEventListener("click", () => {
       if (selectedDislikeMemberIds.has(member.id)) {
         selectedDislikeMemberIds.delete(member.id);
@@ -165,7 +167,9 @@ function renderAllergyMemberButtons() {
     btn.type = "button";
     btn.className = "status-btn member-btn";
     btn.textContent = member.name;
-    if (selectedAllergyMemberIds.has(member.id)) btn.classList.add("is-selected");
+    const isSelected = selectedAllergyMemberIds.has(member.id);
+    if (isSelected) btn.classList.add("is-selected");
+    btn.setAttribute("aria-pressed", String(isSelected));
     btn.addEventListener("click", () => {
       if (selectedAllergyMemberIds.has(member.id)) {
         selectedAllergyMemberIds.delete(member.id);

@@ -4,6 +4,17 @@
 const SAVED_MENUS_KEY = "menuApp.savedMenus";
 const PERIOD_STORAGE_KEY = "menuApp.periodStart";
 const PERIOD_END_STORAGE_KEY = "menuApp.periodEnd";
+const SIDE_DISH_KEY = "menuApp.sideDishes";
+
+function loadAllSideDishes() {
+  const raw = localStorage.getItem(SIDE_DISH_KEY);
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
 
 const savedMenuList = document.getElementById("saved-menu-list");
 const savedMenuEmpty = document.getElementById("saved-menu-empty");
@@ -45,6 +56,20 @@ function renderSavedMenus() {
     openBtn.appendChild(labelSpan);
     openBtn.appendChild(rangeSpan);
     openBtn.addEventListener("click", () => {
+      // 保存した時点の献立・副菜の中身があれば復元する。そうしないと、同じ日付で
+      // AIの献立を読み込み直していた場合、保存したはずの内容ではなく今の内容が開いてしまう。
+      if (item.menuSnapshot && Object.keys(item.menuSnapshot).length > 0) {
+        const menuMap = loadMenu();
+        for (const [dateKey, entry] of Object.entries(item.menuSnapshot)) {
+          menuMap[dateKey] = entry;
+        }
+        localStorage.setItem(MENU_STORAGE_KEY, JSON.stringify(menuMap));
+
+        const periodKey = `${item.periodStart}_${item.periodEnd}`;
+        const allSideDishes = loadAllSideDishes();
+        allSideDishes[periodKey] = item.sideDishesSnapshot || [];
+        localStorage.setItem(SIDE_DISH_KEY, JSON.stringify(allSideDishes));
+      }
       localStorage.setItem(PERIOD_STORAGE_KEY, item.periodStart);
       localStorage.setItem(PERIOD_END_STORAGE_KEY, item.periodEnd);
       location.href = "index.html";
@@ -211,8 +236,13 @@ loadTrendBtn.addEventListener("click", () => {
 });
 
 preferenceProfileInput.value = loadPreferenceProfile();
+// blurだけだと入力直後にアプリを閉じた場合保存されないことがあるので、入力のたびにも保存する
+preferenceProfileInput.addEventListener("input", () => {
+  savePreferenceProfile(preferenceProfileInput.value);
+});
 preferenceProfileInput.addEventListener("blur", () => {
-  savePreferenceProfile(preferenceProfileInput.value.trim());
+  preferenceProfileInput.value = preferenceProfileInput.value.trim();
+  savePreferenceProfile(preferenceProfileInput.value);
 });
 
 // PWA用：Service Workerを登録してオフラインでも開けるようにする
