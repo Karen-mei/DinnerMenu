@@ -156,10 +156,15 @@ function buildTrendPrompt() {
       .join("\n");
   });
 
+  const currentProfile = loadPreferenceProfile();
+  const currentProfileBlock = currentProfile
+    ? `【これまでの「好みと傾向」（手で書き直した内容を含む）】\n${currentProfile}\n\n上記はこれまでの分析結果です。これまでの内容で今も正しいものは引き継ぎつつ、新しい記録を踏まえて更新してください。\n\n`
+    : "";
+
   return `以下は、保存したお気に入りの献立と、その感想の記録です。これらから、味付けの傾向・よく使う食材・好評だった料理の共通点などを分析し、今後の献立作りに活かせるポイントを箇条書きで5〜8個程度にまとめてください。
 説明や前置きは不要です。箇条書きの本文だけを出力してください。
 
-${blocks.join("\n\n")}`;
+${currentProfileBlock}${blocks.join("\n\n")}`;
 }
 
 makeTrendPromptBtn.addEventListener("click", () => {
@@ -187,6 +192,14 @@ loadTrendBtn.addEventListener("click", () => {
     loadTrendStatus.textContent = "AIの返事を貼り付けてから押してください。";
     loadTrendStatus.classList.add("is-error");
     return;
+  }
+
+  if (loadPreferenceProfile()) {
+    const ok = window.confirm("今の「好みと傾向」の内容を、この結果で上書きします。よろしいですか？");
+    if (!ok) {
+      loadTrendStatus.textContent = "";
+      return;
+    }
   }
 
   preferenceProfileInput.value = text;

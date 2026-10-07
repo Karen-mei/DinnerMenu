@@ -19,9 +19,9 @@ function loadFamilyMembers() {
 
 // 「苦手な食材」ページの画面表示
 // 「いつまで」を設定すると、その日を過ぎたらAIへの質問文には含めなくなる
-// （妊娠中だけNG、のような一時的な制限のため）。空欄ならずっと有効。
+// （体調や時期によって一時的に避けたいもの、のための制限）。空欄ならずっと有効。
 const DISLIKE_STORAGE_KEY = "menuApp.dislikedIngredients";
-const DEFAULT_DISLIKED_INGREDIENTS = ["レバー", "加工肉", "ベーコン"];
+const DEFAULT_DISLIKED_INGREDIENTS = [];
 
 const dislikeForm = document.getElementById("dislike-form");
 const dislikeNameInput = document.getElementById("dislike-name-input");

@@ -2,6 +2,14 @@
   box-sizing: border-box;
 }
 
+/* iPhoneのSafariは16px未満の入力欄にフォーカスすると画面を自動拡大してしまうため、
+   すべての入力欄で最低16px(1rem)を確保する（個別の指定はこれを上書きしない）。 */
+input,
+select,
+textarea {
+  font-size: 1rem;
+}
+
 body {
   margin: 0;
   font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
@@ -276,7 +284,6 @@ main .card + .card {
 .period-controls input[type="date"] {
   flex: 1;
   padding: 8px;
-  font-size: 0.9rem;
   border: 1px solid #ddd;
   border-radius: 8px;
   min-width: 0;
@@ -476,7 +483,6 @@ main .card + .card {
 .ai-textarea {
   width: 100%;
   padding: 10px 12px;
-  font-size: 0.9rem;
   border: 1px solid #ddd;
   border-radius: 8px;
   margin-bottom: 8px;
@@ -567,7 +573,6 @@ main .card + .card {
 .menu-veg-input {
   display: block;
   width: 100%;
-  font-size: 0.85rem;
   padding: 6px;
   margin: 4px 0 2px -6px;
   border: 1px solid #ddd;

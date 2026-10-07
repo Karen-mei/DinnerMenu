@@ -81,9 +81,9 @@ render(loadWishes());
 
 // 「苦手な食材」のデータ読み書き（画面はdislikes.htmlの方にある）
 // ここに登録したものは、毎回のAIへの質問文で「使わないでください」として伝える。
-// 「いつまで」が設定されていて、その日を過ぎていたら対象外にする（妊娠中だけNG、等）。
+// 「いつまで」が設定されていて、その日を過ぎていたら対象外にする（体調や時期によって一時的に避けたいもの、等）。
 const DISLIKE_STORAGE_KEY = "menuApp.dislikedIngredients";
-const DEFAULT_DISLIKED_INGREDIENTS = ["レバー", "加工肉", "ベーコン"];
+const DEFAULT_DISLIKED_INGREDIENTS = [];
 
 function loadDislikedIngredients() {
   const raw = localStorage.getItem(DISLIKE_STORAGE_KEY);
@@ -545,8 +545,6 @@ function buildPrompt() {
   return `あなたは家庭料理の献立を考える専門家です。以下の条件で、指定された期間（${dayCount}日間）分の晩ごはんの献立を提案してください。
 
 【条件】
-・1歳の子どもも大人と同じ料理を取り分けて食べます。できるだけ薄味にしやすい、取り分けしやすい料理を中心に考えてください。
-・子どもの鉄分摂取も意識して、赤身の肉やほうれん草、ひじき、あさりなど鉄分が多い食材を週に数回は取り入れてください。
 ・以下の「苦手な食材」は使わないでください。
 ・以下の「アレルギー」に書かれている食材は、安全上の理由で絶対に使わないでください。少量の使用や、原材料として紛れ込む可能性（例：卵アレルギーならマヨネーズや練り物にも注意）にも配慮してください。同じ料理を取り分けて食べる家族構成なので、対象の家族が食べる日は、その料理自体にアレルギー食材を使わないでください。
 ・「好みと傾向」が書かれている場合は、それも踏まえて味付けや献立の方向性を考えてください。
@@ -945,11 +943,29 @@ function startEditingDish(dateKey, date) {
     saved = true;
     const current = loadMenu();
     const newDish = input.value.trim();
+
+    // 手入力の行は分類・値段を持たないので、同じ名前の食材が他の記録にあれば
+    // そこから分類・値段を引き継ぐ（そうしないと毎回「その他」・0円にリセットされる）
+    const knownByName = new Map();
+    for (const dayEntry of Object.values(current)) {
+      const ings = (dayEntry && (dayEntry.ingredients || dayEntry.vegetables)) || [];
+      for (const ing of ings) {
+        const norm = normalizeIngredient(ing);
+        if (norm.name && !knownByName.has(norm.name) && (norm.category !== "その他" || norm.price)) {
+          knownByName.set(norm.name, { category: norm.category, price: norm.price });
+        }
+      }
+    }
+
     const newIngredients = vegInput.value
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean)
-      .map(normalizeIngredient);
+      .map((line) => {
+        const norm = normalizeIngredient(line);
+        const known = knownByName.get(norm.name);
+        return known ? { ...norm, category: known.category, price: known.price } : norm;
+      });
     current[dateKey] = { ...current[dateKey], dish: newDish || null, ingredients: newIngredients };
     saveMenu(current);
     renderMenu();
