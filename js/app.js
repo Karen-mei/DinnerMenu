@@ -177,49 +177,8 @@ stockForm.addEventListener("submit", (event) => {
 
 renderStock();
 
-// 「調味料マスタ」のデータ読み書き（画面はpantry.htmlの方にある）
-// 家にある調味料をチェックしておくと、買う食材リストから自動で除外される。
-const PANTRY_STORAGE_KEY = "menuApp.pantryItems";
-const DEFAULT_PANTRY_ITEMS = [
-  "醤油", "みそ", "塩", "砂糖", "酢", "みりん", "料理酒",
-  "サラダ油", "ごま油", "こしょう", "だしの素", "片栗粉", "マヨネーズ", "ケチャップ",
-];
-
-function loadPantry() {
-  const raw = localStorage.getItem(PANTRY_STORAGE_KEY);
-  if (!raw) {
-    // 初回だけ、よくある調味料をデフォルトで入れておく
-    const defaults = DEFAULT_PANTRY_ITEMS.map((name, i) => ({ id: i, name, hasIt: true }));
-    localStorage.setItem(PANTRY_STORAGE_KEY, JSON.stringify(defaults));
-    return defaults;
-  }
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
-
-// 「家族構成」のデータ読み書き（画面はfamily.htmlの方にある）
-const FAMILY_STORAGE_KEY = "menuApp.familyMembers";
-const DEFAULT_FAMILY_MEMBERS = [
-  { id: 0, name: "ママ", type: "adult", phase: "" },
-  { id: 1, name: "パパ", type: "adult", phase: "" },
-  { id: 2, name: "子ども", type: "child", phase: "〜3歳（大人の1/3〜1/2程度）" },
-];
-
-function loadFamilyMembers() {
-  const raw = localStorage.getItem(FAMILY_STORAGE_KEY);
-  if (!raw) {
-    localStorage.setItem(FAMILY_STORAGE_KEY, JSON.stringify(DEFAULT_FAMILY_MEMBERS));
-    return DEFAULT_FAMILY_MEMBERS;
-  }
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
+// 「調味料マスタ」「家族構成」のデータ読み込みは js/shared.js にまとめてある
+// （index.htmlでjs/app.jsより先に読み込んでいる）。
 
 // 「今週の予定」機能
 // 日付(YYYY-MM-DD)ごとに、晩ごはんにいる家族のID一覧(presentIds)と、
@@ -418,14 +377,43 @@ function shiftPeriod(direction) {
   renderAll();
 }
 
+// 開始日・終了日をちょっと動かしただけ（期間の境界の微調整）だと、
+// 「期間キー（開始日_終了日）」が変わってしまい、その期間に紐づく
+// 「追加した物」「副菜」「結果・メモ」「購入チェック」が前のキーの下に
+// 迷子になる。境界を動かすときは、前のキーのデータを新しいキーに
+// そのまま引き継ぐ。（「次の期間/前の期間」で別の期間に移動するときは
+// 引き継がない＝今の期間のデータは今の期間のまま残る。）
+function migratePeriodScopedData(oldPeriodKey, newPeriodKey) {
+  if (oldPeriodKey === newPeriodKey) return;
+  // 呼ばれる時点（ボタン操作後）では全部定義済みなので、ここで組み立てる
+  const periodScopedStorageKeys = [PERIOD_NOTES_KEY, SIDE_DISH_KEY, EXTRA_SHOPPING_KEY, SHOPPING_CHECKED_KEY];
+  for (const storageKey of periodScopedStorageKeys) {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) continue;
+    let all;
+    try {
+      all = JSON.parse(raw);
+    } catch {
+      continue;
+    }
+    if (all[oldPeriodKey] !== undefined && all[newPeriodKey] === undefined) {
+      all[newPeriodKey] = all[oldPeriodKey];
+      delete all[oldPeriodKey];
+      localStorage.setItem(storageKey, JSON.stringify(all));
+    }
+  }
+}
+
 prevPeriodBtn.addEventListener("click", () => shiftPeriod(-1));
 nextPeriodBtn.addEventListener("click", () => shiftPeriod(1));
 periodStartInput.addEventListener("change", () => {
   if (!periodStartInput.value) return;
+  const oldPeriodKey = getPeriodKey();
   savePeriodStart(periodStartInput.value);
   if (parseDateKey(loadPeriodEnd()) < parseDateKey(periodStartInput.value)) {
     savePeriodEnd(periodStartInput.value);
   }
+  migratePeriodScopedData(oldPeriodKey, getPeriodKey());
   refreshPeriodInput();
   renderAll();
 });
@@ -435,7 +423,9 @@ periodEndInput.addEventListener("change", () => {
     periodEndInput.value = loadPeriodEnd();
     return;
   }
+  const oldPeriodKey = getPeriodKey();
   savePeriodEnd(periodEndInput.value);
+  migratePeriodScopedData(oldPeriodKey, getPeriodKey());
   renderAll();
 });
 
@@ -546,7 +536,7 @@ function buildPrompt() {
 
 【条件】
 ・以下の「苦手な食材」は使わないでください。
-・以下の「アレルギー」に書かれている食材は、安全上の理由で絶対に使わないでください。少量の使用や、原材料として紛れ込む可能性（例：卵アレルギーならマヨネーズや練り物にも注意）にも配慮してください。同じ料理を取り分けて食べる家族構成なので、対象の家族が食べる日は、その料理自体にアレルギー食材を使わないでください。
+・以下の「アレルギー」に書かれている食材は、安全上の理由で、対象の家族がその日いるかどうかに関わらず、この期間中は一切使わないでください。少量の使用や、原材料として紛れ込む可能性（例：卵アレルギーならマヨネーズや練り物にも注意）にも配慮してください。
 ・「好みと傾向」が書かれている場合は、それも踏まえて味付けや献立の方向性を考えてください。
 ・「作らない」の日、または人数が0人や未選択の日は献立を考えず、dish を null、ingredients を空配列にしてください。
 ・各日に書かれている人数（大人◯人・子ども◯人）に合わせて、使う食材と分量を計算してください。人数が少ない日は、品数が少なめの簡単な料理でも構いません。
@@ -811,6 +801,39 @@ function extractJson(text) {
   return null;
 }
 
+// AIが"2026-10-1"のように指定と違う日付形式を返すと、カレンダー側では
+// 一致する日が見つからず、エラーも出ないままその日の献立だけ表示されなくなる。
+// それを防ぐため、読み込み時に形式をチェックして件数を教える。
+const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+// 読み込んだ食材に、登録済みのアレルギー・苦手食材と同じ・似た名前が無いか
+// 簡単に突き合わせる。文字列の部分一致だけなので完璧ではないが、
+// 確認を忘れたときの保険として。
+function findSafetyMatches(menuMap, dateKeys) {
+  const allergyItems = loadAllergies().filter((i) => i.text && i.text.trim());
+  const dislikeItems = loadActiveDislikedIngredients().filter((i) => i.text && i.text.trim());
+  const matches = [];
+
+  for (const dateKey of dateKeys) {
+    const entry = menuMap[dateKey];
+    if (!entry || !Array.isArray(entry.ingredients)) continue;
+    for (const ing of entry.ingredients) {
+      if (!ing.name) continue;
+      for (const item of allergyItems) {
+        if (ing.name.includes(item.text) || item.text.includes(ing.name)) {
+          matches.push({ dateKey, dish: entry.dish, ingredientName: ing.name, label: item.text, kind: "アレルギー" });
+        }
+      }
+      for (const item of dislikeItems) {
+        if (ing.name.includes(item.text) || item.text.includes(ing.name)) {
+          matches.push({ dateKey, dish: entry.dish, ingredientName: ing.name, label: item.text, kind: "苦手な食材" });
+        }
+      }
+    }
+  }
+  return matches;
+}
+
 loadMenuBtn.addEventListener("click", () => {
   const text = aiResponseInput.value.trim();
   if (!text) {
@@ -832,8 +855,14 @@ loadMenuBtn.addEventListener("click", () => {
   }
 
   const menuMap = loadMenu();
+  const updatedDateKeys = [];
+  let invalidDateCount = 0;
   for (const day of parsed.days) {
     if (!day.date) continue;
+    if (!DATE_KEY_PATTERN.test(day.date)) {
+      invalidDateCount++;
+      continue;
+    }
     const rawIngredients = day.ingredients || day.vegetables;
     menuMap[day.date] = {
       dish: day.dish || null,
@@ -842,6 +871,7 @@ loadMenuBtn.addEventListener("click", () => {
         ? rawIngredients.filter(Boolean).map(normalizeIngredient)
         : [],
     };
+    updatedDateKeys.push(day.date);
   }
   saveMenu(menuMap);
   renderMenu();
@@ -851,8 +881,31 @@ loadMenuBtn.addEventListener("click", () => {
     renderSideDishes();
   }
 
-  loadStatus.textContent = "読み込みました。下に献立が表示されています。";
-  loadStatus.classList.remove("is-error");
+  const safetyMatches = findSafetyMatches(menuMap, updatedDateKeys);
+
+  const statusLines = ["読み込みました。下に献立が表示されています。"];
+  let hasWarning = false;
+
+  if (invalidDateCount > 0) {
+    statusLines.push(`⚠️ ${invalidDateCount}件、日付の形式が読み取れず反映できませんでした。Claudeに「YYYY-MM-DD」形式で出し直してもらってください。`);
+    hasWarning = true;
+  }
+
+  if (safetyMatches.length > 0) {
+    const allergyMatches = safetyMatches.filter((m) => m.kind === "アレルギー");
+    const target = allergyMatches.length > 0 ? allergyMatches : safetyMatches;
+    const examples = target
+      .slice(0, 3)
+      .map((m) => `${m.dateKey}「${m.dish || "（献立なし）"}」の${m.ingredientName}（${m.kind}：${m.label}）`)
+      .join("、");
+    statusLines.push(`⚠️ ${allergyMatches.length > 0 ? "アレルギー" : "苦手な食材"}に似た名前の食材が見つかりました：${examples}。使う前に必ずご自身の目で確認してください。`);
+    hasWarning = true;
+  } else {
+    statusLines.push("念のため、出来上がった献立にアレルギー・苦手食材が入っていないか確認してください。");
+  }
+
+  loadStatus.textContent = statusLines.join("\n");
+  loadStatus.classList.toggle("is-error", hasWarning);
   aiResponseInput.value = "";
 });
 
@@ -1187,6 +1240,9 @@ function getShoppingGroups() {
         grouped.delete(stockName);
       } else {
         entry.remainingAmount = `${remaining}${neededParsed.unit}`;
+        // 予算も、必要量のうち在庫で賄えない割合だけに縮小する（そうしないと
+        // 在庫を引いた後も、引く前の全量ぶんの金額が予算に乗ったままになる）
+        entry.remainingRatio = neededParsed.value > 0 ? remaining / neededParsed.value : 1;
       }
     }
     // 単位が違う・量を読み取れない等で比べられない場合は何もしない（全量を残す）
@@ -1264,8 +1320,9 @@ function renderShoppingList() {
     headerLi.textContent = category;
     shoppingList.appendChild(headerLi);
 
-    for (const [name, { items, remainingAmount }] of entries) {
-      const itemTotal = items.reduce((sum, item) => sum + (item.price || 0), 0);
+    for (const [name, { items, remainingAmount, remainingRatio }] of entries) {
+      const rawTotal = items.reduce((sum, item) => sum + (item.price || 0), 0);
+      const itemTotal = remainingRatio != null ? Math.round(rawTotal * remainingRatio) : rawTotal;
       totalBudget += itemTotal;
 
       const breakdown = items
@@ -1276,7 +1333,11 @@ function renderShoppingList() {
         .join(" ・ ");
 
       const total = sumAmounts(items.map((item) => item.amount));
-      const totalLabel = remainingAmount ? `在庫を引いて残り ${remainingAmount}` : total ? `合計 ${total}` : "";
+      const totalLabel = remainingAmount
+        ? `在庫を引いて残り ${remainingAmount}${itemTotal ? `（目安¥${itemTotal.toLocaleString()}）` : ""}`
+        : total
+          ? `合計 ${total}`
+          : "";
       const detailText = totalLabel ? `${totalLabel} （${breakdown}）` : breakdown;
 
       appendShoppingRow(name, detailText);
@@ -1369,6 +1430,7 @@ renderMenu();
 // 別の端末でそのファイルを取り込むと同じデータが復元できる（端末変更・夫婦間の共有用）。
 const exportBackupBtn = document.getElementById("export-backup-btn");
 const exportBackupStatus = document.getElementById("export-backup-status");
+const lastBackupLabel = document.getElementById("last-backup-label");
 const importBackupInput = document.getElementById("import-backup-input");
 const importBackupStatus = document.getElementById("import-backup-status");
 
@@ -1380,6 +1442,14 @@ function collectBackupData() {
     }
   }
   return data;
+}
+
+// 最後にいつ書き出したか覚えておく（しばらく取っていないことに気づけるように）
+const LAST_BACKUP_KEY = "menuApp.lastBackupAt";
+
+function renderLastBackupDate() {
+  const date = localStorage.getItem(LAST_BACKUP_KEY);
+  lastBackupLabel.textContent = date ? `前回の書き出し：${date}` : "まだ一度も書き出していません。";
 }
 
 exportBackupBtn.addEventListener("click", () => {
@@ -1395,9 +1465,14 @@ exportBackupBtn.addEventListener("click", () => {
   a.remove();
   URL.revokeObjectURL(url);
 
+  localStorage.setItem(LAST_BACKUP_KEY, toDateKey(new Date()));
+  renderLastBackupDate();
+
   exportBackupStatus.textContent = "書き出しました。このファイルを保存しておいてください。";
   exportBackupStatus.classList.remove("is-error");
 });
+
+renderLastBackupDate();
 
 importBackupInput.addEventListener("change", async () => {
   const file = importBackupInput.files[0];

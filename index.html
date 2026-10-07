@@ -166,7 +166,9 @@
   <section class="card">
     <h2>データのバックアップ</h2>
     <p class="section-note">入力したデータはこの端末のブラウザだけに保存されています。端末を変えても、ここで書き出したファイルを新しい端末で取り込めば復元できます。夫婦で共有したい場合も、書き出したファイルを送って取り込んでもらってください。</p>
+    <p class="section-note import-warning">⚠️ 書き出したファイルには、アレルギーなど健康に関する情報も含まれます。送る相手やアプリには気をつけてください。</p>
     <button type="button" id="export-backup-btn" class="nav-link-btn">データを書き出す（ファイルを保存）</button>
+    <p id="last-backup-label" class="section-note"></p>
     <p id="export-backup-status" class="copy-status" aria-live="polite"></p>
 
     <label for="import-backup-input" class="nav-link-btn import-backup-label">データを取り込む（ファイルを選択）</label>
@@ -176,6 +178,7 @@
   </section>
 </main>
 
+<script src="js/shared.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

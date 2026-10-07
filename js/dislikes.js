@@ -1,21 +1,6 @@
-// 「家族構成」のデータ読み込み（画面はfamily.htmlの方にある）
-// 苦手な食材・アレルギーの両方で「誰が対象か」を選ぶのに使う。
-const FAMILY_STORAGE_KEY = "menuApp.familyMembers";
-const DEFAULT_FAMILY_MEMBERS = [
-  { id: 0, name: "ママ", type: "adult", phase: "" },
-  { id: 1, name: "パパ", type: "adult", phase: "" },
-  { id: 2, name: "子ども", type: "child", phase: "〜3歳（大人の1/3〜1/2程度）" },
-];
-
-function loadFamilyMembers() {
-  const raw = localStorage.getItem(FAMILY_STORAGE_KEY);
-  if (!raw) return DEFAULT_FAMILY_MEMBERS;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
+// 「家族構成」のデータ読み込み（loadFamilyMembers）は js/shared.js にまとめてあり、
+// dislikes.htmlでこのファイルより先に読み込んでいる。苦手な食材・アレルギーの
+// 両方で「誰が対象か」を選ぶのに使う。
 
 // 「苦手な食材」ページの画面表示
 // 「いつまで」を設定すると、その日を過ぎたらAIへの質問文には含めなくなる

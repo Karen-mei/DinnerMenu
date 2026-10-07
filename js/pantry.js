@@ -1,28 +1,10 @@
 // 「調味料マスタ」ページの画面表示
-// データの読み書き(loadPantry/保存のキー)はindex.htmlのapp.jsと同じ考え方をここでも使う。
-const PANTRY_STORAGE_KEY = "menuApp.pantryItems";
-const DEFAULT_PANTRY_ITEMS = [
-  "醤油", "みそ", "塩", "砂糖", "酢", "みりん", "料理酒",
-  "サラダ油", "ごま油", "こしょう", "だしの素", "片栗粉", "マヨネーズ", "ケチャップ",
-];
+// PANTRY_STORAGE_KEY・DEFAULT_PANTRY_ITEMS・loadPantry() は js/shared.js に
+// まとめてあり、pantry.htmlでこのファイルより先に読み込んでいる。
 
 const pantryForm = document.getElementById("pantry-form");
 const pantryInput = document.getElementById("pantry-input");
 const pantryList = document.getElementById("pantry-list");
-
-function loadPantry() {
-  const raw = localStorage.getItem(PANTRY_STORAGE_KEY);
-  if (!raw) {
-    const defaults = DEFAULT_PANTRY_ITEMS.map((name, i) => ({ id: i, name, hasIt: true }));
-    savePantry(defaults);
-    return defaults;
-  }
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
 
 function savePantry(items) {
   localStorage.setItem(PANTRY_STORAGE_KEY, JSON.stringify(items));

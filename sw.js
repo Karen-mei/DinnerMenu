@@ -1,7 +1,7 @@
 // Service Worker：オフラインでもアプリが開けるようにするための仕組み。
 // 「まずネットから最新を取りに行き、取れなければキャッシュ（保存済み）を使う」方式にして、
 // 電波があるときは常に最新版が表示されるようにする。
-const CACHE_NAME = "menu-app-v16";
+const CACHE_NAME = "menu-app-v17";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
@@ -10,6 +10,7 @@ const FILES_TO_CACHE = [
   "./menus.html",
   "./family.html",
   "./css/style.css",
+  "./js/shared.js",
   "./js/app.js",
   "./js/pantry.js",
   "./js/dislikes.js",

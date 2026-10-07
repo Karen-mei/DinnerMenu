@@ -1,11 +1,30 @@
 // 「家族構成」ページの画面表示
 // ここで登録した人が、トップ画面の「今週の予定」で日ごとに選べるようになる。
-const FAMILY_STORAGE_KEY = "menuApp.familyMembers";
-const DEFAULT_FAMILY_MEMBERS = [
-  { id: 0, name: "ママ", type: "adult", phase: "" },
-  { id: 1, name: "パパ", type: "adult", phase: "" },
-  { id: 2, name: "子ども", type: "child", phase: "〜3歳（大人の1/3〜1/2程度）" },
-];
+// FAMILY_STORAGE_KEY・DEFAULT_FAMILY_MEMBERS・loadFamilyMembers() は
+// js/shared.js にまとめてあり、family.htmlでこのファイルより先に読み込んでいる。
+
+// 家族を削除する前に、その人がアレルギー・苦手食材の対象に選ばれていないか確認する。
+// 削除すると登録自体は残るが、対象が「家族全員」扱いに変わってしまうため、
+// 気づかないまま範囲が広がらないよう一声かける。
+const ALLERGY_STORAGE_KEY = "menuApp.allergies";
+const DISLIKE_STORAGE_KEY = "menuApp.dislikedIngredients";
+
+function countReferencesToMember(memberId) {
+  let count = 0;
+  for (const storageKey of [ALLERGY_STORAGE_KEY, DISLIKE_STORAGE_KEY]) {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) continue;
+    try {
+      const items = JSON.parse(raw);
+      for (const item of items) {
+        if ((item.memberIds || []).includes(memberId)) count++;
+      }
+    } catch {
+      // 読み取れなければ無視してよい（件数0として扱う）
+    }
+  }
+  return count;
+}
 
 const familyForm = document.getElementById("family-form");
 const familyNameInput = document.getElementById("family-name-input");
@@ -16,19 +35,6 @@ const familyList = document.getElementById("family-list");
 familyTypeInput.addEventListener("change", () => {
   familyPhaseInput.hidden = familyTypeInput.value !== "child";
 });
-
-function loadFamilyMembers() {
-  const raw = localStorage.getItem(FAMILY_STORAGE_KEY);
-  if (!raw) {
-    saveFamilyMembers(DEFAULT_FAMILY_MEMBERS);
-    return DEFAULT_FAMILY_MEMBERS;
-  }
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
 
 function saveFamilyMembers(members) {
   localStorage.setItem(FAMILY_STORAGE_KEY, JSON.stringify(members));
@@ -87,6 +93,13 @@ function renderFamily() {
     deleteBtn.textContent = "×";
     deleteBtn.setAttribute("aria-label", "削除");
     deleteBtn.addEventListener("click", () => {
+      const refCount = countReferencesToMember(member.id);
+      if (refCount > 0) {
+        const ok = window.confirm(
+          `${member.name}さんは、アレルギー・苦手食材の登録${refCount}件で対象に選ばれています。削除すると、それらの登録は「家族全員」が対象として扱われるようになります（登録自体は消えません）。削除してよろしいですか？`
+        );
+        if (!ok) return;
+      }
       const current = loadFamilyMembers().filter((m) => m.id !== member.id);
       saveFamilyMembers(current);
       renderFamily();
