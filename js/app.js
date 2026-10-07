@@ -433,8 +433,8 @@ refreshPeriodInput();
 // という強い言い方で伝える。安全に関わるため、誰が対象かも書いて伝える。
 
 // 「AIに献立を考えてもらう」機能
-// 裏方サーバーは使わず、質問文をコピーしてChatGPT・Claudeなどお好きなAIアプリに
-// 貼り付けてもらい、返ってきた答えを貼り付けてもらう方式（無料で使える）。
+// 裏方サーバーは使わず、質問文をコピーしてお好きなAIツールに貼り付けてもらい、
+// 返ってきた答えを貼り付けてもらう方式（無料で使える）。
 // MENU_STORAGE_KEY・loadMenu・saveMenu は js/shared.js にまとめてある。
 
 const makePromptBtn = document.getElementById("make-prompt-btn");
@@ -578,7 +578,7 @@ makePromptBtn.addEventListener("click", () => {
 copyPromptBtn.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(promptOutput.value);
-    copyStatus.textContent = "コピーしました。ChatGPTやClaudeなど、お使いのAIアプリに貼り付けてください。";
+    copyStatus.textContent = "コピーしました。お使いのAIツールに貼り付けてください。";
     copyStatus.classList.remove("is-error");
   } catch {
     // クリップボードが使えない環境向けに、手動選択できるようにしておく

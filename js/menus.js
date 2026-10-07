@@ -166,7 +166,7 @@ makeTrendPromptBtn.addEventListener("click", () => {
 copyTrendPromptBtn.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(trendPromptOutput.value);
-    copyTrendStatus.textContent = "コピーしました。ChatGPTやClaudeなど、お使いのAIアプリに貼り付けてください。";
+    copyTrendStatus.textContent = "コピーしました。お使いのAIツールに貼り付けてください。";
     copyTrendStatus.classList.remove("is-error");
   } catch {
     trendPromptOutput.focus();
