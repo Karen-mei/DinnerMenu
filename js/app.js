@@ -536,6 +536,11 @@ function buildPrompt() {
     : "";
 
   const dayCount = getPeriodDates().length;
+  const sideDishCountValue = parseInt(loadSideDishCount(), 10);
+  const sideDishCountText =
+    Number.isFinite(sideDishCountValue) && sideDishCountValue >= 0
+      ? `${sideDishCountValue}品`
+      : "2品程度";
 
   return `あなたは家庭料理の献立を考える専門家です。以下の条件で、指定された期間（${dayCount}日間）分の晩ごはんの献立を提案してください。
 
@@ -554,7 +559,7 @@ function buildPrompt() {
 ・同じ料理が期間中に重複しないようにしてください。
 ・ingredients には、その日の料理に使う食材を全て入れてください（「今ある食材」で賄える分も、記録のためそのまま含めてください）。野菜だけでなく、肉・魚・調味料・加工品なども含めてください。各食材には name（食材名）、amount（分量、例: "300g"）、category（"肉・魚" "野菜" "調味料" "その他" のいずれか）、price（今の日本の物価を踏まえた概算の金額。円単位の数値。わからなければ0）を付けてください。
 ・ご飯などの主食は、炊いた後の状態（「ごはん 400g」など）ではなく、実際に買う単位（「米 2合」など）で記載してください。同じ食材は、期間を通してできるだけ同じ名前・同じ単位で統一してください（例: 米は毎回「米 ○合」のように書く）。
-・メインの献立とは別に、週2品くらいを目安に副菜（取り分けしやすい小鉢料理など）も提案し、sideDishes に入れてください。
+・メインの献立とは別に、この期間（${dayCount}日間）で合計${sideDishCountText}くらいを目安に副菜（取り分けしやすい小鉢料理など）も提案し、sideDishes に入れてください。${sideDishCountValue === 0 ? "（0品の場合は副菜を提案せず、sideDishesは空配列にしてください）" : ""}
 ${extraInstructionBlock}${preferenceBlock}
 【苦手な食材（使わないでください）】
 ${dislikedText}
@@ -621,6 +626,19 @@ function loadExtraInstruction() {
 extraInstructionInput.value = loadExtraInstruction();
 extraInstructionInput.addEventListener("blur", () => {
   localStorage.setItem(EXTRA_INSTRUCTION_KEY, extraInstructionInput.value.trim());
+});
+
+// 副菜の品数（この期間で合計何品くらい欲しいか。空欄なら2品程度をデフォルトにする）
+const SIDE_DISH_COUNT_KEY = "menuApp.sideDishCount";
+const sideDishCountInput = document.getElementById("side-dish-count-input");
+
+function loadSideDishCount() {
+  return localStorage.getItem(SIDE_DISH_COUNT_KEY) || "";
+}
+
+sideDishCountInput.value = loadSideDishCount();
+sideDishCountInput.addEventListener("blur", () => {
+  localStorage.setItem(SIDE_DISH_COUNT_KEY, sideDishCountInput.value.trim());
 });
 
 // 「好みと傾向」のデータ読み込み（画面はmenus.htmlの方にある）
